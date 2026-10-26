@@ -1,0 +1,55 @@
+{
+  "name": "frosty",
+  "productName": "Frosty",
+  "version": "1.2.0",
+  "description": "Frosty - an AI-assisted video editor for Windows",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/smoke.js",
+    "dist": "electron-builder --win nsis portable",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "app.frosty.editor",
+    "productName": "Frosty",
+    "files": [
+      "assets/**",
+      "main.js",
+      "preload.js",
+      "lib/**",
+      "renderer/**",
+      "scripts/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**",
+      "scripts/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/frosty.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Frosty",
+      "uninstallDisplayName": "Frosty",
+      "artifactName": "Frosty-Setup-${version}.${ext}"
+    },
+    "artifactName": "Frosty-${version}-${arch}.${ext}"
+  }
+}

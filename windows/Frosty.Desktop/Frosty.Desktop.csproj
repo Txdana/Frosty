@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Frosty</AssemblyName>
+    <RootNamespace>Frosty.Desktop</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\native\build\Release\frosty_core.dll" Link="frosty_core.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\native\build\Release\frosty_core.dll')" />
+    <None Include="..\..\native\build\frosty_core.dll" Link="frosty_core.dll" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\native\build\frosty_core.dll')" />
+  </ItemGroup>
+</Project>

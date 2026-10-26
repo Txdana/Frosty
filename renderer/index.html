@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; media-src 'self' file: blob:; img-src 'self' data: file:; style-src 'self' file: 'unsafe-inline'">
+<title>Frosty</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><img src="../assets/frosty-logo.png" alt="" class="brand-logo"> <span>Frosty</span></div>
+  <button id="bImport">Import media</button>
+  <button id="bOpen">Open</button>
+  <button id="bSave">Save</button>
+  <span class="sp"></span>
+  <button id="bSettings">Settings</button>
+  <select id="preset"></select>
+  <button id="bExport" class="primary">Export MP4</button>
+</header>
+<main>
+  <section id="bin" class="panel"><h3>Media</h3><div id="binList" class="list"></div><button id="bMusic" class="small">+ Background music</button><label class="chk muted"><input id="musicDuck" type="checkbox"> Duck music under dialogue</label><div id="musicName" class="muted"></div></section>
+  <section id="stage" class="panel">
+    <div id="screen"><video id="vid" playsinline></video><div id="ov"></div></div>
+    <div class="transport">
+      <button id="bPlay">▶</button><button id="bPrevFrame" title="Previous frame">◀|</button><button id="bNextFrame" title="Next frame">|▶</button><span id="tc">0:00.0 / 0:00.0</span>
+      <span class="sp"></span>
+      <button id="bSplit" title="S">Split</button><button id="bDel" title="Delete">Delete</button>
+      <button id="bUndo" title="Ctrl+Z">Undo</button><button id="bRedo" title="Ctrl+Y">Redo</button>
+      <label class="muted">Zoom <input id="pps" type="range" min="10" max="200" value="60"></label>
+    </div>
+  </section>
+  <section id="side" class="panel">
+    <h3>AI Editor</h3>
+    <textarea id="prompt" placeholder="Describe the edit… e.g. “Make a 30 second highlight reel, cut dead air, add a title at the start.”"></textarea>
+    <div class="row"><label><input type="checkbox" id="useTr"> use transcript</label><label><input type="checkbox" id="useFr"> use frames</label><label><input type="checkbox" id="useVid"> send video</label></div>
+    <button id="bAI" class="primary">Run AI edit</button>
+    <div class="row wrap">
+      <button class="small" id="bSil">Remove silences</button>
+      <button class="small" id="bCap">Auto-captions</button>
+      <button class="small" id="bUrl">Import from URL…</button>
+      <button class="small" id="bDoc">Doctor</button>
+      <button class="small" id="bScenes">Split at scenes</button>
+      <button class="small" id="bBrag">Launch video…</button>
+    </div>
+    <div id="status" class="muted"></div>
+    <h3>Inspector</h3>
+    <div id="insp" class="muted">Select a clip or text.</div>
+    <h3>Scene Search (Video-RAG)</h3>
+    <div class="row"><button id="bIndex" class="small">Index media</button><label class="chk muted"><input id="indexVision" type="checkbox"> AI visual captions</label></div>
+    <div class="row"><input id="sceneQuery" placeholder="Search moments, speech, objects…"><button id="bSceneSearch" class="small">Search</button></div><div id="sceneResults" class="list"></div>
+    <h3>Log</h3>
+    <div id="log"></div>
+  </section>
+</main>
+<section id="tlwrap">
+  <div class="timeline-tools"><strong>Timeline</strong><button id="bTimelineMode" class="small">Enable free timeline</button><button id="bAddVTrack" class="small">+ Video track</button><span id="timelineModeHelp" class="muted">Sequential edit mode · select a track row, then use PiP to add overlays.</span></div>
+  <div id="tl"><div id="ruler"></div><div id="videoTracks"></div><div class="video-track-row main-track-row"><div id="mainTrackHead" class="track-controls"></div><div class="trk" id="trkV"></div></div><div class="trk t" id="trkT"></div><div class="trk a" id="trkA" title="Audio clips"></div><div id="head"></div></div>
+</section>
+
+<dialog id="dSettings"><form method="dialog">
+  <h3>Settings</h3>
+  <label>OpenRouter API key<input id="sKey" type="password" placeholder="sk-or-…"></label>
+  <label>Editing model (any OpenRouter model)<input id="sModel" list="modelList" placeholder="google/gemini-2.5-flash"></label>
+  <datalist id="modelList"></datalist>
+  <div id="mInfo" class="muted"></div>
+  <label>Fallback models (comma-separated)<input id="sFb" placeholder="anthropic/claude-sonnet-4.5, openai/gpt-4.1"></label>
+  <label>Provider routing<select id="sSort"><option value="">default</option><option value="price">cheapest</option><option value="throughput">fastest throughput</option><option value="latency">lowest latency</option></select></label>
+  <label>Image model (generate stills)<input id="sImg" list="modelList" placeholder="google/gemini-2.5-flash-image"></label>
+  <div class="row"><button type="button" id="sCheck" class="small">Check key / credits</button><button type="button" id="sLoad" class="small">Load models</button></div>
+  <label>Whisper model<select id="sWh"><option>tiny</option><option>base</option><option>small</option><option>medium</option></select></label>
+  <div class="row"><button value="cancel">Cancel</button><button id="sOk" value="ok" class="primary">Save</button></div>
+</form></dialog>
+
+<dialog id="dUrl"><form method="dialog"><h3>Import video from URL</h3><label>YouTube / X / Reddit / TikTok / Bilibili link<input id="uUrl" placeholder="https://…"></label><div class="row"><button value="cancel">Cancel</button><button id="uOk" value="ok" class="primary">Download</button></div></form></dialog>
+
+<dialog id="dBrag"><form method="dialog">
+  <h3>Launch video</h3>
+  <label>Project name<input id="gName"></label>
+  <label>Tagline<input id="gTag"></label>
+  <label>Features (one per line)<textarea id="gFeat" rows="5"></textarea></label>
+  <label class="chk"><input type="checkbox" id="gAI" checked> Let AI write the scenes</label>
+  <div class="row"><button value="cancel">Cancel</button><button id="gOk" value="ok" class="primary">Create</button></div>
+</form></dialog>
+
+<script src="../lib/timeline.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

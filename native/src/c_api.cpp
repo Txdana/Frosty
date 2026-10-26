@@ -1,0 +1,40 @@
+#include "frosty/c_api.h"
+#include "frosty/core.hpp"
+#include <algorithm>
+#include <iomanip>
+#include <filesystem>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+namespace {
+void setError(char* out,int cap,const std::string& message){if(!out||cap<=0)return;const auto n=std::min<std::size_t>(message.size(),static_cast<std::size_t>(cap-1));std::copy_n(message.data(),n,out);out[n]='\0';}
+std::string escapeJson(const std::string& value){std::string out;for(unsigned char c:value){switch(c){case '\"':out+="\\\"";break;case '\\':out+="\\\\";break;case '\n':out+="\\n";break;case '\r':out+="\\r";break;case '\t':out+="\\t";break;default:if(c<0x20){std::ostringstream x;x<<"\\u"<<std::hex<<std::setw(4)<<std::setfill('0')<<static_cast<int>(c);out+=x.str();}else out+=static_cast<char>(c);}}return out;}
+struct Handle { frosty::Project project; frosty::CommandHistory history; std::string buffer; explicit Handle(frosty::Project p):project(std::move(p)),history(100){} };
+Handle* get(frosty_project_handle h){if(!h)throw std::runtime_error("Project handle is null");return static_cast<Handle*>(h);}
+}
+extern "C" {
+const char* frosty_core_version(void){return "0.2.0-phase1";}
+frosty_project_handle frosty_project_create(void){try{return new Handle(frosty::makeEmptyProject());}catch(...){return nullptr;}}
+frosty_project_handle frosty_project_load(const char* path,char* error,int cap){try{if(!path)throw std::runtime_error("Project path is null");frosty::ValidationReport report;return new Handle(frosty::loadProject(path,&report));}catch(const std::exception&e){setError(error,cap,e.what());return nullptr;}catch(...){setError(error,cap,"Unknown native engine error");return nullptr;}}
+#ifdef _WIN32
+frosty_project_handle frosty_project_load_w(const wchar_t* path,char* error,int cap){try{if(!path)throw std::runtime_error("Project path is null");frosty::ValidationReport report;return new Handle(frosty::loadProject(std::filesystem::path(path),&report));}catch(const std::exception&e){setError(error,cap,e.what());return nullptr;}catch(...){setError(error,cap,"Unknown native engine error");return nullptr;}}
+#endif
+int frosty_project_save(frosty_project_handle h,const char* path,char* error,int cap){try{auto*x=get(h);if(!path)throw std::runtime_error("Project path is null");auto r=frosty::validateAndRepair(x->project,false);if(r.hasErrors())throw std::runtime_error("Project validation failed; save cancelled");frosty::saveProjectAtomic(x->project,path);return 1;}catch(const std::exception&e){setError(error,cap,e.what());return 0;}catch(...){setError(error,cap,"Unknown native engine error");return 0;}}
+#ifdef _WIN32
+int frosty_project_save_w(frosty_project_handle h,const wchar_t* path,char* error,int cap){try{auto*x=get(h);if(!path)throw std::runtime_error("Project path is null");auto r=frosty::validateAndRepair(x->project,false);if(r.hasErrors())throw std::runtime_error("Project validation failed; save cancelled");frosty::saveProjectAtomic(x->project,std::filesystem::path(path));return 1;}catch(const std::exception&e){setError(error,cap,e.what());return 0;}catch(...){setError(error,cap,"Unknown native engine error");return 0;}}
+#endif
+const char* frosty_project_summary(frosty_project_handle h){static thread_local std::string result;try{auto*x=get(h);std::ostringstream s;s<<"{\"id\":\""<<escapeJson(x->project.id)<<"\",\"name\":\""<<escapeJson(x->project.name)<<"\",\"schemaVersion\":"<<x->project.schemaVersion<<",\"sequences\":"<<x->project.sequences.size()<<",\"assets\":"<<x->project.assets.size()<<"}";result=s.str();return result.c_str();}catch(...){return "{}";}}
+const char* frosty_project_json(frosty_project_handle h){static thread_local std::string result;try{result=frosty::projectToJson(get(h)->project);return result.c_str();}catch(...){return "{}";}}
+int frosty_project_add_track(frosty_project_handle h,const char* name,const char* type,char* error,int cap){try{auto*x=get(h);auto& p=x->project;if(p.sequences.empty())throw std::runtime_error("Project has no sequence");frosty::TimelineCommand c;c.kind=frosty::CommandKind::AddTrack;c.sequenceId=p.activeSequenceId.empty()?p.sequences.front().id:p.activeSequenceId;c.text=name?name:"";c.integer=(type&&std::string(type)=="audio")?1:0;if(!x->history.execute(p,c))throw std::runtime_error("Could not add track");return 1;}catch(const std::exception&e){setError(error,cap,e.what());return 0;}catch(...){setError(error,cap,"Unknown native engine error");return 0;}}
+int frosty_project_set_track_state(frosty_project_handle h,const char* id,const char* property,int value,char* error,int cap){try{auto*x=get(h);if(!id||!property)throw std::runtime_error("Track ID and property are required");if(x->project.sequences.empty())throw std::runtime_error("Project has no sequence");frosty::TimelineCommand c;c.kind=frosty::CommandKind::SetTrackState;c.sequenceId=x->project.activeSequenceId.empty()?x->project.sequences.front().id:x->project.activeSequenceId;c.entityId=id;c.text=property;c.flag=value!=0;if(!x->history.execute(x->project,c))throw std::runtime_error("Track update rejected");return 1;}catch(const std::exception&e){setError(error,cap,e.what());return 0;}catch(...){setError(error,cap,"Unknown native engine error");return 0;}}
+int frosty_project_undo(frosty_project_handle h){try{return get(h)->history.undo(get(h)->project)?1:0;}catch(...){return 0;}}
+int frosty_project_redo(frosty_project_handle h){try{return get(h)->history.redo(get(h)->project)?1:0;}catch(...){return 0;}}
+int frosty_project_recovery_snapshot(frosty_project_handle h,const char* dir,char* error,int cap){try{if(!dir)throw std::runtime_error("Recovery directory is null");frosty::saveRecoverySnapshot(get(h)->project,dir,10);return 1;}catch(const std::exception&e){setError(error,cap,e.what());return 0;}catch(...){setError(error,cap,"Unknown native engine error");return 0;}}
+frosty_project_handle frosty_project_recover_latest(const char* dir,char* error,int cap){try{if(!dir)throw std::runtime_error("Recovery directory is null");return new Handle(frosty::recoverLatestSnapshot(dir));}catch(const std::exception&e){setError(error,cap,e.what());return nullptr;}catch(...){setError(error,cap,"Unknown native engine error");return nullptr;}}
+#ifdef _WIN32
+int frosty_project_recovery_snapshot_w(frosty_project_handle h,const wchar_t* dir,char* error,int cap){try{if(!dir)throw std::runtime_error("Recovery directory is null");frosty::saveRecoverySnapshot(get(h)->project,std::filesystem::path(dir),10);return 1;}catch(const std::exception&e){setError(error,cap,e.what());return 0;}catch(...){setError(error,cap,"Unknown native engine error");return 0;}}
+frosty_project_handle frosty_project_recover_latest_w(const wchar_t* dir,char* error,int cap){try{if(!dir)throw std::runtime_error("Recovery directory is null");return new Handle(frosty::recoverLatestSnapshot(std::filesystem::path(dir)));}catch(const std::exception&e){setError(error,cap,e.what());return nullptr;}catch(...){setError(error,cap,"Unknown native engine error");return nullptr;}}
+#endif
+const char* frosty_project_validation(frosty_project_handle h){static thread_local std::string result;try{auto report=frosty::validateAndRepair(get(h)->project,false);std::ostringstream o;o<<"{\"valid\":"<<(report.hasErrors()?"false":"true")<<",\"issues\":[";for(std::size_t i=0;i<report.issues.size();++i){if(i)o<<',';auto&v=report.issues[i];o<<"{\"severity\":\""<<escapeJson(v.severity)<<"\",\"code\":\""<<escapeJson(v.code)<<"\",\"message\":\""<<escapeJson(v.message)<<"\",\"entityId\":\""<<escapeJson(v.entityId)<<"\"}";}o<<"]}";result=o.str();return result.c_str();}catch(...){return "{\"valid\":false,\"issues\":[]}";}}
+void frosty_project_destroy(frosty_project_handle h){delete static_cast<Handle*>(h);}
+}
