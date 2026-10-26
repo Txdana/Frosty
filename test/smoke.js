@@ -49,6 +49,39 @@ assert(TL.reorderVideoTrack(editOps, 2, 3) && editOps.trackState['3'].name === '
 TL.applyOps(editOps, [{ op: 'rate_stretch', clip_id: ec.id, duration: 3 }, { op: 'split_layer', layer_id: splitLayer.id, at: 3 }]);
 assert(Math.abs(TL.clipDur(ec) - 3) < 0.001, 'AI editing operations are wired');
 
+// Selection, Clipboard, Markers, Groups, and Lift/Insert/Overwrite Phase 1 & 2 verification
+TL.selectClips(editOps, [ea.id, eb.id]);
+assert.strictEqual(editOps.selected.length, 2, 'selection helper selects requested clip IDs');
+TL.copySelected(editOps);
+assert.strictEqual(editOps.clipboard.length, 2, 'copy selected duplicates clip data to clipboard');
+TL.pasteClips(editOps, 12);
+assert.strictEqual(editOps.video.length, 5, 'pasting clipboard clips adds duplicate clips to timeline');
+
+const marker = TL.addMarker(editOps, 'Intro Cut', 2.5);
+assert.strictEqual(marker.name, 'Intro Cut', 'marker addition creates marker');
+assert.strictEqual(editOps.markers.length, 1, 'timeline stores markers');
+TL.removeMarker(editOps, marker.id);
+assert.strictEqual(editOps.markers.length, 0, 'marker removal removes marker');
+
+const group = TL.groupClips(editOps, [ea.id, eb.id], 'Main Group');
+assert.strictEqual(group.clipIds.length, 2, 'groupClips groups clips');
+TL.ungroupClips(editOps, group.id);
+assert.strictEqual(editOps.groups.length, 0, 'ungroupClips removes group');
+
+const liftTl = TL.empty();
+const la = TL.addClip(liftTl, { path: 'a.mp4', name: 'a.mp4', duration: 10 });
+TL.setKeyframe(la, 'rotation', 0, 0, 'linear');
+TL.setKeyframe(la, 'rotation', 5, 90, 'linear');
+const copiedKeys = TL.copyKeyframes(la);
+const lb = TL.addClip(liftTl, { path: 'b.mp4', name: 'b.mp4', duration: 10 });
+TL.pasteKeyframes(lb, copiedKeys);
+assert.strictEqual(lb.keyframes.rotation.length, 2, 'copy and paste keyframes between clips');
+TL.resetClipDefaults(lb);
+assert.strictEqual(Object.keys(lb.keyframes).length, 0, 'reset clip defaults clears transforms and keyframes');
+
+TL.liftEdit(liftTl, 2, 4);
+assert(liftTl.video.length >= 2, 'lift edit splits clip without collapsing timeline gap');
+
 const animTest = TL.empty();
 const animClip = TL.addClip(animTest, { path: 'clip.mp4', name: 'clip.mp4', duration: 5, type: 'video', hasAudio: true });
 assert(animClip.transform && animClip.transform.rotation === 0, 'clip transform defaults');
