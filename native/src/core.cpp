@@ -1,3 +1,4 @@
+#pragma once
 #include "frosty/core.hpp"
 #include <boost/property_tree/json_parser.hpp>
 #include <algorithm>
@@ -73,6 +74,28 @@ Project makeEmptyProject(){Project p;p.id=newId("project");Sequence s;s.id=newId
 std::string projectToJson(const Project& project){std::ostringstream out;emitJson(out,toTree(project));return out.str();}
 bool ValidationReport::hasErrors()const{return std::any_of(issues.begin(),issues.end(),[](const auto&i){return i.severity=="error";});}
 double clipDuration(const Clip&c){return std::max(0.0,c.sourceOut-c.sourceIn)/std::max(0.001,c.playbackRate);}
+double evaluateKeyframe(const Clip& clip, const std::string& prop, double time, double defaultValue) {
+ std::vector<Keyframe> keys;for(const auto& k:clip.keyframes)if(k.property==prop)keys.push_back(k);
+ if(keys.empty())return defaultValue;
+ std::sort(keys.begin(),keys.end(),[](const Keyframe& a,const Keyframe& b){return a.time<b.time;});
+ if(time<=keys.front().time)return keys.front().value;
+ if(time>=keys.back().time)return keys.back().value;
+ for(std::size_t i=0;i+1<keys.size();++i){
+  if(time>=keys[i].time&&time<=keys[i+1].time){
+   const double t0=keys[i].time, t1=keys[i+1].time;
+   const double v0=keys[i].value, v1=keys[i+1].value;
+   if(t1<=t0)return v0;
+   const double factor=(time-t0)/(t1-t0);
+   if(keys[i].interpolation=="constant")return v0;
+   if(keys[i].interpolation=="smoothstep"){
+    const double s=factor*factor*(3.0-2.0*factor);
+    return v0+(v1-v0)*s;
+   }
+   return v0+(v1-v0)*factor;
+  }
+ }
+ return defaultValue;
+}
 ValidationReport validateAndRepair(Project& p,bool repair){
  ValidationReport r;auto issue=[&](std::string sev,std::string code,std::string msg,std::string id=""){r.issues.push_back({std::move(sev),std::move(code),std::move(msg),std::move(id)});};
  const std::set<std::string> knownTopLevel={"format","schemaVersion","id","name","settings","activeSequenceId","assets","sequences","legacyPayload","legacySourceJson","mode","width","height","fps","frameRate","video","layers","audio","text","trackCount","trackState","music","trans","pos","duration","start","in","out","speed","version","export","effects","markers","projectSettings"};
@@ -115,10 +138,26 @@ EditResult applyCommand(Project& p,const TimelineCommand& cmd){
  if(cmd.kind==CommandKind::TimelineEdit){if(cmd.editKind!=EditKind::Overwrite||!cmd.replacement)return applyTimelineEdit(p,cmd.sequenceId,cmd.editKind,cmd.start,cmd.end);Clip replacement=*cmd.replacement;if(replacement.sourceIn<0||replacement.sourceOut<=replacement.sourceIn||replacement.playbackRate<=0)return{false,"Replacement clip has an invalid source range or playback rate"};if(std::none_of(s.tracks.begin(),s.tracks.end(),[&](const Track&t){return t.id==replacement.trackId;}))return{false,"Replacement clip track not found"};auto result=applyTimelineEdit(p,cmd.sequenceId,EditKind::Overwrite,cmd.start,cmd.start+clipDuration(replacement));if(!result.ok)return result;replacement.id=replacement.id.empty()?newId("clip"):replacement.id;replacement.timelineStart=cmd.start;s.clips.push_back(replacement);return{true,"Overwrite edit applied"};}
  if(cmd.kind==CommandKind::AddTrack){Track t;t.id=newId("track");t.name=cmd.text.empty()?"Track "+std::to_string(s.tracks.size()+1):cmd.text;t.type=cmd.integer==1?"audio":"video";t.order=static_cast<int>(s.tracks.size());s.tracks.push_back(t);return{true,t.id};}
  if(cmd.kind==CommandKind::SetTrackState){auto t=std::find_if(s.tracks.begin(),s.tracks.end(),[&](auto& x){return x.id==cmd.entityId;});if(t==s.tracks.end())return{false,"Track not found"};if(cmd.text=="locked")t->locked=cmd.flag;else if(cmd.text=="muted")t->muted=cmd.flag;else if(cmd.text=="solo")t->solo=cmd.flag;else if(cmd.text=="visible")t->visible=cmd.flag;else if(cmd.text=="name")t->name=cmd.value;else return{false,"Unknown track property"};return{true,"Track updated"};}
+ if(cmd.kind==CommandKind::AddClip){
+  Track* tr=nullptr;for(auto& t:s.tracks)if(t.id==cmd.entityId){tr=&t;break;}
+  if(!tr)return{false,"Target track not found"};
+  if(tr->locked)return{false,"Target track is locked"};
+  Clip c;c.id=newId("clip");c.trackId=cmd.entityId;c.assetId=cmd.assetId;c.name=cmd.text.empty()?"Clip":cmd.text;c.timelineStart=std::max(0.0,cmd.start);c.sourceIn=std::max(0.0,cmd.time);c.sourceOut=std::max(c.sourceIn+0.001,cmd.val<=c.sourceIn?c.sourceIn+1.0:cmd.val);s.clips.push_back(c);return{true,c.id};
+ }
  auto ci=std::find_if(s.clips.begin(),s.clips.end(),[&](auto& c){return c.id==cmd.entityId;});if(ci==s.clips.end())return{false,"Clip not found"};auto tr=std::find_if(s.tracks.begin(),s.tracks.end(),[&](auto& t){return t.id==ci->trackId;});if(tr!=s.tracks.end()&&tr->locked)return{false,"Clip is on a locked track"};
  if(cmd.kind==CommandKind::MoveClip){if(!std::isfinite(cmd.start)||cmd.start<0)return{false,"Invalid clip start"};ci->timelineStart=cmd.start;return{true,"Clip moved"};}
  if(cmd.kind==CommandKind::SetClipRange){if(!std::isfinite(cmd.start)||!std::isfinite(cmd.end)||cmd.start<0||cmd.end<=cmd.start)return{false,"Invalid source range"};ci->sourceIn=cmd.start;ci->sourceOut=cmd.end;return{true,"Clip range updated"};}
  if(cmd.kind==CommandKind::RemoveClip){s.clips.erase(ci);return{true,"Clip removed"};}
+ if(cmd.kind==CommandKind::SetKeyframe){
+  if(cmd.propName.empty())return{false,"Keyframe property name required"};
+  auto kit=std::find_if(ci->keyframes.begin(),ci->keyframes.end(),[&](const Keyframe& k){return k.property==cmd.propName&&std::abs(k.time-cmd.time)<1e-6;});
+  if(kit!=ci->keyframes.end()){
+   kit->value=cmd.val;if(!cmd.interpolation.empty())kit->interpolation=cmd.interpolation;
+  }else{
+   Keyframe k;k.id=newId("key");k.property=cmd.propName;k.time=std::max(0.0,cmd.time);k.value=cmd.val;k.interpolation=cmd.interpolation.empty()?"linear":cmd.interpolation;ci->keyframes.push_back(k);
+  }
+  return{true,"Keyframe updated"};
+ }
  return{false,"Unsupported command"};
 }
 CommandHistory::CommandHistory(std::size_t limit):limit_(std::max<std::size_t>(1,limit)){}

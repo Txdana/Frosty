@@ -29,12 +29,14 @@ void saveProjectAtomic(const Project& project,const std::filesystem::path& path)
 void saveRecoverySnapshot(const Project& project,const std::filesystem::path& path,std::size_t keep=10);
 Project recoverLatestSnapshot(const std::filesystem::path& directory);
 double clipDuration(const Clip& clip);
+double evaluateKeyframe(const Clip& clip, const std::string& prop, double time, double defaultValue);
 enum class EditKind { RippleDelete,InsertGap,Overwrite };
-enum class CommandKind { TimelineEdit, MoveClip, SetClipRange, AddTrack, SetTrackState, RemoveClip };
+enum class CommandKind { TimelineEdit, MoveClip, SetClipRange, AddTrack, SetTrackState, RemoveClip, AddClip, SetKeyframe };
 struct TimelineCommand {
   CommandKind kind{CommandKind::TimelineEdit}; EditKind editKind{EditKind::RippleDelete};
   std::string sequenceId, entityId; double start{0}, end{0};
   std::string text,value; bool flag{false}; int integer{0}; std::optional<Clip> replacement;
+  std::string assetId, propName, interpolation; double time{0}, val{0};
 };
 struct EditResult { bool ok{false}; std::string message; };
 EditResult applyTimelineEdit(Project& project,const std::string& sequenceId,EditKind kind,double start,double end);

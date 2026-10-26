@@ -2,6 +2,7 @@
 #include "frosty/c_api.h"
 #include <cassert>
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -32,8 +33,39 @@ int main(){
  auto invalid=makeEmptyProject();invalid.settings.width=0;invalid.settings.frameRate.denominator=0;invalid.settings.audioChannels=0;auto& invalidSeq=invalid.sequences.front();Clip bad;bad.id="duplicate";bad.trackId=invalidSeq.tracks.front().id;bad.sourceIn=4;bad.sourceOut=2;bad.opacity=2;invalidSeq.clips.push_back(bad);Clip duplicate=bad;duplicate.id="duplicate";duplicate.sourceIn=0;duplicate.sourceOut=1;invalidSeq.clips.push_back(duplicate);auto repairReport=validateAndRepair(invalid,true);assert(repairReport.repaired>=5);assert(invalid.settings.width>0&&invalid.settings.frameRate.denominator>0&&invalid.settings.audioChannels>0);assert(invalid.sequences[0].clips[0].id!=invalid.sequences[0].clips[1].id);assert(invalid.sequences[0].clips[0].sourceOut>=invalid.sequences[0].clips[0].sourceIn);
  // Group and transition identities survive canonical serialization and validation.
  auto structured=makeEmptyProject();auto& structuredSeq=structured.sequences.front();Clip left;left.id=newId("clip");left.trackId=structuredSeq.tracks.front().id;left.sourceOut=2;left.name="Left";Clip right=left;right.id=newId("clip");right.timelineStart=1.5;right.name="Right";structuredSeq.clips={left,right};Group group;group.id=newId("group");group.name="Pair";group.clipIds={left.id,right.id};structuredSeq.groups.push_back(group);Transition tr;tr.id=newId("transition");tr.fromClipId=left.id;tr.toClipId=right.id;tr.trackId=left.trackId;tr.start=1.5;tr.duration=0.5;structuredSeq.transitions.push_back(tr);assert(!validateAndRepair(structured,false).hasErrors());auto structuredFile=dir/"structured.frosty";saveProjectAtomic(structured,structuredFile);auto structuredAgain=loadProject(structuredFile);assert(structuredAgain.sequences[0].groups.size()==1);assert(structuredAgain.sequences[0].groups[0].clipIds.size()==2);assert(structuredAgain.sequences[0].transitions.size()==1);
+ // Test newly added keyframe evaluation in core engine & C ABI
+ Clip kclip;kclip.id="kclip";
+ Keyframe k1;k1.id="k1";k1.property="rotation";k1.time=0.0;k1.value=0.0;k1.interpolation="linear";
+ Keyframe k2;k2.id="k2";k2.property="rotation";k2.time=10.0;k2.value=100.0;k2.interpolation="smoothstep";
+ kclip.keyframes.push_back(k1);kclip.keyframes.push_back(k2);
+ assert(std::abs(evaluateKeyframe(kclip,"rotation",0.0,0.0)-0.0)<1e-6);
+ assert(std::abs(evaluateKeyframe(kclip,"rotation",10.0,0.0)-100.0)<1e-6);
+ assert(std::abs(evaluateKeyframe(kclip,"rotation",5.0,0.0)-50.0)<1e-6); // linear 0..10
+ assert(std::abs(evaluateKeyframe(kclip,"opacity",5.0,1.0)-1.0)<1e-6); // fallback default
+
  // C ABI operations used by the WPF application are wired to the same command history.
- auto handle=frosty_project_create();assert(handle!=nullptr);char error[512]{};assert(frosty_project_add_track(handle,"A1","audio",error,sizeof(error))==1);auto apiJson=std::string(frosty_project_json(handle));assert(apiJson.find("A1")!=std::string::npos);assert(frosty_project_undo(handle)==1);assert(std::string(frosty_project_json(handle)).find("A1")==std::string::npos);assert(frosty_project_redo(handle)==1);assert(std::string(frosty_project_validation(handle)).find("\"valid\":true")!=std::string::npos);frosty_project_destroy(handle);
+ auto handle=frosty_project_create();assert(handle!=nullptr);char error[512]{};assert(frosty_project_add_track(handle,"A1","audio",error,sizeof(error))==1);auto apiJson=std::string(frosty_project_json(handle));assert(apiJson.find("A1")!=std::string::npos);assert(frosty_project_undo(handle)==1);assert(std::string(frosty_project_json(handle)).find("A1")==std::string::npos);assert(frosty_project_redo(handle)==1);
+ frosty_project_destroy(handle);
+
+ handle = frosty_project_create();
+ auto hJson = std::string(frosty_project_json(handle));
+ std::size_t idPos = hJson.find("\"id\": \"track-");
+ assert(idPos != std::string::npos);
+ std::string hTrackId = hJson.substr(idPos + 7, hJson.find("\"", idPos + 7) - (idPos + 7));
+
+ assert(frosty_project_add_clip(handle, hTrackId.c_str(), "", "TestClip", 0.0, 0.0, 5.0, error, sizeof(error)) == 1);
+ auto clipJson = std::string(frosty_project_json(handle));
+ assert(clipJson.find("TestClip") != std::string::npos);
+ std::size_t clipIdPos = clipJson.find("\"id\": \"clip-");
+ assert(clipIdPos != std::string::npos);
+ std::string hClipId = clipJson.substr(clipIdPos + 7, clipJson.find("\"", clipIdPos + 7) - (clipIdPos + 7));
+
+ assert(frosty_project_set_clip_keyframe(handle, hClipId.c_str(), "rotation", 0.0, 0.0, "linear", error, sizeof(error)) == 1);
+ assert(frosty_project_set_clip_keyframe(handle, hClipId.c_str(), "rotation", 10.0, 100.0, "linear", error, sizeof(error)) == 1);
+ assert(std::abs(frosty_project_evaluate_keyframe(handle, hClipId.c_str(), "rotation", 5.0, 0.0) - 50.0) < 1e-6);
+
+ assert(frosty_project_set_clip_keyframe(handle, "non-existent", "scale", 0.0, 1.0, "linear", error, sizeof(error)) == 0);
+ assert(std::string(frosty_project_validation(handle)).find("\"valid\":true")!=std::string::npos);frosty_project_destroy(handle);
  auto snap=dir/"recovery";saveRecoverySnapshot(again,snap,3);auto recovered=recoverLatestSnapshot(snap);assert(recovered.id==again.id);
  std::cout<<"Phase 1 core tests passed\n";std::filesystem::remove_all(dir);return 0;
 }
