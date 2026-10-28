@@ -1,18 +1,15 @@
 {
   "name": "frosty",
   "productName": "Frosty",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Frosty - an AI-assisted video editor for Windows",
   "main": "main.js",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "start": "electron .",
-    "test": "node test/smoke.js",
+    "test": "node test/ffmpeg-license-boundary.js && node test/smoke.js",
     "dist": "electron-builder --win nsis portable",
     "dist:win": "electron-builder --win nsis"
-  },
-  "dependencies": {
-    "ffmpeg-static": "^5.3.0"
   },
   "devDependencies": {
     "electron": "^33.0.0",
@@ -28,11 +25,11 @@
       "lib/**",
       "renderer/**",
       "scripts/**",
-      "package.json"
-    ],
-    "asarUnpack": [
-      "node_modules/ffmpeg-static/**",
-      "scripts/**"
+      "package.json",
+      "LICENSE",
+      "NOTICE",
+      "THIRD_PARTY_NOTICES.md",
+      "RUNTIME_REQUIREMENTS.md"
     ],
     "win": {
       "target": [
