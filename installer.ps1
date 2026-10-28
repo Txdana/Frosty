@@ -244,6 +244,28 @@ try {
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
     Copy-Item -Path (Join-Path $published '*') -Destination $installDir -Recurse -Force
 
+    $uninstallScript = Join-Path $installDir 'Uninstall-Frosty.ps1'
+    if (-not (Test-Path -LiteralPath $uninstallScript)) { throw 'The native build did not include Uninstall-Frosty.ps1; refusing to register an incomplete installation.' }
+    $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Frosty'
+    New-Item -Path $uninstallKey -Force | Out-Null
+    $uninstallCommand = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + $uninstallScript + '"'
+    $registryValues = @{
+        DisplayName = 'Frosty'
+        DisplayVersion = [string]$pkg.version
+        Publisher = 'Txdana'
+        InstallLocation = $installDir
+        DisplayIcon = (Join-Path $installDir 'Frosty.exe')
+        UninstallString = $uninstallCommand
+        QuietUninstallString = ($uninstallCommand + ' -Quiet')
+        URLInfoAbout = 'https://github.com/Txdana/Frosty'
+        InstallDate = (Get-Date -Format 'yyyyMMdd')
+    }
+    foreach ($entry in $registryValues.GetEnumerator()) {
+        New-ItemProperty -Path $uninstallKey -Name $entry.Key -Value ([string]$entry.Value) -PropertyType String -Force | Out-Null
+    }
+    New-ItemProperty -Path $uninstallKey -Name 'NoModify' -Value 1 -PropertyType DWord -Force | Out-Null
+    New-ItemProperty -Path $uninstallKey -Name 'NoRepair' -Value 1 -PropertyType DWord -Force | Out-Null
+
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $sourceSnapshot) | Out-Null
     if (Test-Path -LiteralPath $sourceSnapshot) { Remove-Item -LiteralPath $sourceSnapshot -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $sourceSnapshot | Out-Null
