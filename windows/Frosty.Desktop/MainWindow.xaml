@@ -1,39 +1,112 @@
-<Window x:Class="Frosty.Desktop.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="Frosty" Width="1440" Height="900" MinWidth="1080" MinHeight="680" Background="{StaticResource AppBackground}" Foreground="#F4F5FA" WindowStartupLocation="CenterScreen">
+<Window x:Class="Frosty.Desktop.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Frosty.Desktop" Title="Frosty" Width="1500" Height="950" MinWidth="1120" MinHeight="720" PreviewKeyDown="MainWindow_PreviewKeyDown" Background="{StaticResource AppBackground}" Foreground="#F4F5FA" WindowStartupLocation="CenterScreen">
   <Grid Margin="12">
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Border Grid.Row="0" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,0,10">
       <DockPanel LastChildFill="True">
         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
           <TextBlock Text="❄ FROSTY" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Accent}" VerticalAlignment="Center" Margin="4,0,18,0"/>
-          <Button Content="New project" Click="NewProject_Click"/><Button Content="Open .frosty" Click="OpenProject_Click"/><Button Content="Save" Click="SaveProject_Click"/><Button Content="Save as…" Click="SaveAs_Click"/>
+          <Button Content="New project" Click="NewProject_Click"/><Button Content="Open .frosty" Click="OpenProject_Click"/><Button Content="Save" Click="SaveProject_Click"/><Button Content="Save as…" Click="SaveAs_Click"/><Button Content="Export video…" Click="ExportVideo_Click"/><Button Content="AI editor…" Click="AiEditor_Click"/>
         </StackPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-          <TextBlock Text="NATIVE CORE" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="10,0,4,0"/><Border Background="#253C36" CornerRadius="5" Padding="7,4"><TextBlock Text="Phase 1" Foreground="#8FE0B9" FontWeight="SemiBold"/></Border>
+          <TextBlock Text="NATIVE CORE" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="10,0,4,0"/><Border Background="#253C36" CornerRadius="5" Padding="7,4"><TextBlock Text="Native timeline + media" Foreground="#8FE0B9" FontWeight="SemiBold"/></Border>
         </StackPanel>
       </DockPanel>
     </Border>
     <Grid Grid.Row="1">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="230"/><ColumnDefinition Width="*"/><ColumnDefinition Width="270"/></Grid.ColumnDefinitions>
-      <Border Grid.Column="0" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,0,8,0">
-        <StackPanel><TextBlock Text="PROJECT" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedText}" Margin="0,0,0,12"/><TextBlock Text="Media &amp; assets" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Imported media will appear here. Phase 1 establishes the native project format and asset identities." TextWrapping="Wrap" Foreground="{StaticResource MutedText}" Margin="0,8,0,16"/><Separator Background="{StaticResource PanelBorder}"/><TextBlock Text="PROJECT MODEL" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedText}" Margin="0,16,0,8"/><TextBlock Text="Stable IDs"/><TextBlock Text="Schema migrations"/><TextBlock Text="Atomic saves"/><TextBlock Text="Recovery snapshots"/></StackPanel>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="245"/><ColumnDefinition Width="*"/><ColumnDefinition Width="275"/></Grid.ColumnDefinitions>
+      <Border Grid.Column="0" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,0,8,0">
+        <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+          <TextBlock Text="MEDIA &amp; ASSETS" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedText}" Margin="2,2,0,10"/>
+          <Button Grid.Row="1" Content="＋ Import media…" Click="ImportMedia_Click" HorizontalAlignment="Stretch"/>
+          <ListView x:Name="MediaAssets" Grid.Row="2" Margin="0,8,0,8" Background="#111621" BorderBrush="{StaticResource PanelBorder}" Foreground="#F4F5FA" SelectionChanged="MediaAssets_SelectionChanged" MouseDoubleClick="MediaAssets_MouseDoubleClick">
+            <ListView.View><GridView><GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="132"/><GridViewColumn Header="Kind" DisplayMemberBinding="{Binding MediaType}" Width="58"/></GridView></ListView.View>
+          </ListView>
+          <StackPanel Grid.Row="3"><TextBlock Text="Double-click a media item to preview it. Import only adds a reference to the existing file; source media is not copied." Foreground="{StaticResource MutedText}" TextWrapping="Wrap" FontSize="11" Margin="2,0,2,8"/><Button Content="Add selected to timeline" Click="AddSelectedClip_Click"/></StackPanel>
+        </Grid>
       </Border>
       <Grid Grid.Column="1" Margin="0,0,8,0">
-        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="210"/></Grid.RowDefinitions>
-        <Border Grid.Row="0" Background="#080B12" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Margin="0,0,0,8">
-          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="440">
-            <TextBlock Text="FROSTY NATIVE EDITOR" FontSize="24" FontWeight="SemiBold" Foreground="#E5E4FF" HorizontalAlignment="Center"/>
-            <TextBlock Text="C++ timeline model · C# WPF workspace · FFmpeg integration follows in the next phases" TextWrapping="Wrap" TextAlignment="Center" Foreground="{StaticResource MutedText}" Margin="0,12,0,0"/>
-            <Border Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,24,0,0"><StackPanel><TextBlock Text="Project status" FontWeight="SemiBold"/><TextBlock x:Name="ProjectSummary" Text="Creating native project…" Foreground="{StaticResource MutedText}" Margin="0,8,0,0" TextWrapping="Wrap"/></StackPanel></Border>
-          </StackPanel>
+        <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="295"/></Grid.RowDefinitions>
+        <Border Grid.Row="0" Background="#080B12" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Margin="0,0,0,8" Padding="8">
+          <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <DockPanel Margin="2,0,2,8"><TextBlock Text="PREVIEW" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedText}"/><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="Render sequence preview" Click="RenderSequencePreview_Click"/><Button Content="GPU timeline play" Click="GpuTimelinePlay_Click"/><Button Content="Pause GPU" Click="GpuTimelinePause_Click"/><Button Content="Play / pause" Click="PlayPause_Click"/><Button Content="Stop" Click="StopPreview_Click"/></StackPanel></DockPanel>
+            <Grid Grid.Row="1" Background="#05070C">
+              <MediaElement x:Name="PreviewPlayer" LoadedBehavior="Manual" UnloadedBehavior="Stop" Stretch="Uniform" MediaOpened="PreviewPlayer_MediaOpened" MediaFailed="PreviewPlayer_MediaFailed"/>
+              <Image x:Name="PreviewStill" Visibility="Collapsed" Stretch="Uniform"/>
+              <local:GpuPreviewHost x:Name="GpuPreviewSurface" Visibility="Collapsed"/>
+              <TextBlock x:Name="PreviewPlaceholder" Text="Import media and double-click an item to preview" Foreground="{StaticResource MutedText}" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="20" IsHitTestVisible="False"/>
+            </Grid>
+            <TextBlock Grid.Row="2" x:Name="PreviewStatus" Text="No media selected" Foreground="{StaticResource MutedText}" FontSize="11" Margin="4,8,4,0" TextTrimming="CharacterEllipsis"/>
+          </Grid>
         </Border>
-        <Border Grid.Row="1" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Padding="12">
-          <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><DockPanel><TextBlock Text="TIMELINE / TRACK MODEL" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedText}"/><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="+ Video track" Click="AddVideoTrack_Click"/><Button Content="+ Audio track" Click="AddAudioTrack_Click"/><Button Content="Lock / unlock" Click="ToggleLock_Click"/><Button Content="Mute / unmute" Click="ToggleMute_Click"/><Button Content="Undo" Click="Undo_Click"/><Button Content="Redo" Click="Redo_Click"/></StackPanel></DockPanel><ListView x:Name="TimelineTracks" Grid.Row="1" Margin="0,10,0,8" Background="#111621" BorderBrush="{StaticResource PanelBorder}" Foreground="#F4F5FA"><ListView.View><GridView><GridViewColumn Header="Track" DisplayMemberBinding="{Binding Name}" Width="180"/><GridViewColumn Header="Type" DisplayMemberBinding="{Binding Type}" Width="80"/><GridViewColumn Header="Order" DisplayMemberBinding="{Binding Order}" Width="70"/><GridViewColumn Header="State" DisplayMemberBinding="{Binding State}" Width="120"/><GridViewColumn Header="Clips" DisplayMemberBinding="{Binding ClipCount}" Width="70"/></GridView></ListView.View></ListView><TextBlock Grid.Row="2" Text="Phase 1 exposes the canonical model and validated track operations. Native video playback, clip placement UI and export remain later-phase work." Foreground="{StaticResource MutedText}" TextWrapping="Wrap" FontSize="11" Margin="2,2,2,0"/></Grid>
+        <Border Grid.Row="1" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Padding="10">
+          <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <DockPanel><TextBlock Text="TIMELINE" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedText}" VerticalAlignment="Center"/><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="+ Video track" Click="AddVideoTrack_Click"/><Button Content="+ Audio track" Click="AddAudioTrack_Click"/><Button Content="Lock / unlock" Click="ToggleLock_Click"/><Button Content="Mute / unmute" Click="ToggleMute_Click"/><Button Content="Undo" Click="Undo_Click"/><Button Content="Redo" Click="Redo_Click"/></StackPanel></DockPanel>
+            <ScrollViewer Grid.Row="1" x:Name="TimelineScroll" Margin="0,8,0,8" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Background="#0C1018" CanContentScroll="False">
+              <Canvas x:Name="TimelineCanvas" Background="#0C1018" Focusable="True"
+                      MouseLeftButtonDown="TimelineCanvas_MouseLeftButtonDown"
+                      MouseMove="TimelineCanvas_MouseMove"
+                      MouseLeftButtonUp="TimelineCanvas_MouseLeftButtonUp" />
+            </ScrollViewer>
+            <!-- Hidden selection adapters keep the existing inspector and keyboard commands bound to the native model. -->
+            <Grid Grid.Row="1" Visibility="Collapsed" IsHitTestVisible="False">
+              <ListView x:Name="TimelineTracks" ItemsSource="{Binding}" Background="#111621" Foreground="#F4F5FA" />
+              <ListView x:Name="TimelineClips" SelectionMode="Extended" Background="#111621" Foreground="#F4F5FA" SelectionChanged="TimelineClips_SelectionChanged" MouseDoubleClick="TimelineClips_MouseDoubleClick" />
+            </Grid>
+            <Grid Grid.Row="2"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+              <DockPanel><TextBlock Text="Selected clip" Foreground="{StaticResource MutedText}" VerticalAlignment="Center"/><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Content="−1 s" Click="MoveClipEarlier_Click"/><Button Content="+1 s" Click="MoveClipLater_Click"/><Button Content="Remove" Click="RemoveClip_Click"/><Button Content="Ripple delete selected" Click="RippleDeleteSelected_Click"/><Button Content="Select all" Click="TimelineSelectAll_Click"/><Button Content="Zoom −" Click="TimelineZoomOut_Click"/><Button Content="Zoom +" Click="TimelineZoomIn_Click"/><CheckBox x:Name="TimelineSnapCheck" Content="Snap" IsChecked="True" VerticalAlignment="Center" Margin="6,0" Foreground="#C5CCDA"/><CheckBox x:Name="TimelineRippleCheck" Content="Ripple trim" IsChecked="False" VerticalAlignment="Center" Margin="6,0" Foreground="#C5CCDA"/></StackPanel><Button Content="Add selected media" Click="AddSelectedClip_Click"/></DockPanel>
+              <WrapPanel Grid.Row="1" Margin="0,5,0,0" VerticalAlignment="Center"><TextBlock Text="Trim source:" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="2,0,8,0"/><Button Content="In −0.5 s" Click="TrimInEarlier_Click"/><Button Content="In +0.5 s" Click="TrimInLater_Click"/><Button Content="Out −0.5 s" Click="TrimOutEarlier_Click"/><Button Content="Out +0.5 s" Click="TrimOutLater_Click"/><Button Content="Split selected at playhead" Click="TimelineSplitAtPlayhead_Click"/><Button Content="Insert 1s gap at playhead" Click="TimelineInsertGap_Click"/><Button Content="Ripple delete 1s at playhead" Click="TimelineRippleDeleteRange_Click"/></WrapPanel>
+              <WrapPanel Grid.Row="2" Margin="0,5,0,0" VerticalAlignment="Center"><TextBlock Text="Name" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="2,0,4,0"/><TextBox x:Name="ClipNameText" Text="Clip" Width="140" Margin="2,0"/><CheckBox x:Name="ClipEnabledCheck" Content="Enabled" IsChecked="True" VerticalAlignment="Center" Margin="6,0"/><TextBlock Text="Volume ×" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="8,0,4,0"/><TextBox x:Name="ClipVolumeText" Text="1" Width="48" Margin="2,0"/><Button Content="Brightness +" Click="BrightnessEffect_Click"/><Button Content="Contrast +" Click="ContrastEffect_Click"/><Button Content="Blur +" Click="BlurEffect_Click"/><Button Content="Clear effects" Click="ClearEffects_Click"/></WrapPanel>
+              <WrapPanel Grid.Row="3" Margin="0,5,0,0" VerticalAlignment="Center"><TextBlock Text="Speed ×" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="2,0,4,0"/><TextBox x:Name="ClipSpeedText" Text="1" Width="48" Margin="2,0"/><TextBlock Text="Opacity" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="8,0,4,0"/><TextBox x:Name="ClipOpacityText" Text="1" Width="48" Margin="2,0"/><TextBlock Text="X" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="8,0,2,0"/><TextBox x:Name="ClipTransformXText" Text="0" Width="46" Margin="2,0"/><TextBlock Text="Y" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="4,0,2,0"/><TextBox x:Name="ClipTransformYText" Text="0" Width="46" Margin="2,0"/><TextBlock Text="Scale X" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="4,0,2,0"/><TextBox x:Name="ClipScaleXText" Text="1" Width="42" Margin="2,0"/><TextBlock Text="Scale Y" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="4,0,2,0"/><TextBox x:Name="ClipScaleYText" Text="1" Width="42" Margin="2,0"/><TextBlock Text="Rotation°" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="4,0,2,0"/><TextBox x:Name="ClipRotationText" Text="0" Width="48" Margin="2,0"/><TextBlock Text="Shear X" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="4,0,2,0"/><TextBox x:Name="ClipShearXText" Text="0" Width="42" Margin="2,0"/><TextBlock Text="Shear Y" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="4,0,2,0"/><TextBox x:Name="ClipShearYText" Text="0" Width="42" Margin="2,0"/><Button Content="Apply properties" Click="ApplyClipProperties_Click"/></WrapPanel>
+            </Grid>
+          </Grid>
         </Border>
       </Grid>
-      <Border Grid.Column="2" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Padding="14">
-        <StackPanel><TextBlock Text="INSPECTOR" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedText}" Margin="0,0,0,12"/><TextBlock Text="Sequence settings" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Resolution" Foreground="{StaticResource MutedText}" Margin="0,14,0,4"/><TextBlock x:Name="ResolutionText" Text="1920 × 1080"/><TextBlock Text="Frame rate" Foreground="{StaticResource MutedText}" Margin="0,12,0,4"/><TextBlock x:Name="FrameRateText" Text="30 / 1 fps"/><TextBlock Text="Color space" Foreground="{StaticResource MutedText}" Margin="0,12,0,4"/><TextBlock x:Name="ColorSpaceText" Text="BT.709 · Limited range"/><Separator Background="{StaticResource PanelBorder}" Margin="0,18,0,12"/><TextBlock Text="Validation" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="Project IDs, track references, source ranges and sequence references are validated by the native engine on load/save." Foreground="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,8,0,0"/></StackPanel>
+      <Border Grid.Column="2" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="10" Padding="12">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel>
+            <TextBlock Text="INSPECTOR" FontSize="12" FontWeight="Bold" Foreground="{StaticResource MutedText}" Margin="0,0,0,12"/>
+            <TextBlock Text="Project" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock x:Name="ProjectSummary" Text="Creating native project…" Foreground="{StaticResource MutedText}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+            <Separator Background="{StaticResource PanelBorder}" Margin="0,16,0,12"/>
+            <TextBlock Text="Sequence settings" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="Resolution" Foreground="{StaticResource MutedText}" Margin="0,14,0,4"/><TextBlock x:Name="ResolutionText" Text="1920 × 1080"/>
+            <TextBlock Text="Frame rate" Foreground="{StaticResource MutedText}" Margin="0,12,0,4"/><TextBlock x:Name="FrameRateText" Text="30 / 1 fps"/>
+            <TextBlock Text="Color space" Foreground="{StaticResource MutedText}" Margin="0,12,0,4"/><TextBlock x:Name="ColorSpaceText" Text="BT.709 · Limited range"/>
+            <Separator Background="{StaticResource PanelBorder}" Margin="0,18,0,12"/>
+            <TextBlock Text="Clip details" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock x:Name="ClipDetails" Text="Select a clip to see its source and timing." Foreground="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+            <Separator Background="{StaticResource PanelBorder}" Margin="0,16,0,10"/>
+            <TextBlock Text="Bézier mask" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="Normalized vector path. Drag anchors or handles; Shift-drag a handle to mirror its opposite handle. Path animation time is local to the selected clip." Foreground="{StaticResource MutedText}" TextWrapping="Wrap" FontSize="11" Margin="0,5,0,8"/>
+            <CheckBox x:Name="MaskEnabledCheck" Content="Enable Bézier mask" IsEnabled="False" Checked="MaskEnabled_Changed" Unchecked="MaskEnabled_Changed" Margin="0,0,0,8"/>
+            <Canvas x:Name="BezierMaskCanvas" Width="245" Height="138" HorizontalAlignment="Left" Background="#101621" ClipToBounds="True" MouseLeftButtonDown="BezierMaskCanvas_MouseLeftButtonDown" MouseMove="BezierMaskCanvas_MouseMove" MouseLeftButtonUp="BezierMaskCanvas_MouseLeftButtonUp" SizeChanged="BezierMaskCanvas_SizeChanged"/>
+            <WrapPanel Margin="0,8,0,0">
+              <Button x:Name="MaskAddAnchorButton" Content="＋ Anchor" Click="MaskAddAnchor_Click" IsEnabled="False"/>
+              <Button x:Name="MaskRemoveAnchorButton" Content="− Anchor" Click="MaskRemoveAnchor_Click" IsEnabled="False"/>
+            </WrapPanel>
+            <TextBlock Text="Path keyframe time (clip-local seconds)" Foreground="{StaticResource MutedText}" FontSize="11" Margin="0,8,0,4"/>
+            <StackPanel Orientation="Horizontal">
+              <TextBox x:Name="MaskPathTimeText" Text="0" Width="68" VerticalContentAlignment="Center" TextChanged="MaskPathTimeText_Changed"/>
+              <ComboBox x:Name="MaskInterpolationCombo" Width="100" SelectedIndex="0" ToolTip="Interpolation to the next path keyframe">
+                <ComboBoxItem Content="linear"/><ComboBoxItem Content="bezier"/><ComboBoxItem Content="constant"/>
+              </ComboBox>
+              <Button x:Name="MaskAddKeyframeButton" Content="Set keyframe" Click="MaskAddKeyframe_Click" IsEnabled="False"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+              <Button x:Name="MaskDeleteKeyframeButton" Content="Delete at time" Click="MaskDeleteKeyframe_Click" IsEnabled="False"/>
+              <Button x:Name="MaskClearKeyframesButton" Content="Clear path animation" Click="MaskClearKeyframes_Click" IsEnabled="False"/>
+              <TextBlock Text="Feather" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="8,0,4,0"/>
+              <TextBox x:Name="MaskFeatherText" Text="0" Width="38" VerticalContentAlignment="Center" LostFocus="MaskFeather_LostFocus" IsEnabled="False"/>
+              <CheckBox x:Name="MaskInvertCheck" Content="Invert" VerticalAlignment="Center" Margin="6,0,0,0" IsEnabled="False" Checked="MaskInvert_Changed" Unchecked="MaskInvert_Changed"/>
+            </StackPanel>
+            <TextBlock x:Name="MaskStatus" Text="Select a clip to edit its mask. A Bézier mask is stored with the project and used by preview and export." Foreground="{StaticResource MutedText}" TextWrapping="Wrap" FontSize="11" Margin="0,8,0,0"/>
+            <Separator Background="{StaticResource PanelBorder}" Margin="0,18,0,12"/>
+            <TextBlock Text="Validation" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="Asset references, source ranges, tracks, masks and sequence links are validated by the C++ native core on save." Foreground="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+          </StackPanel>
+        </ScrollViewer>
       </Border>
     </Grid>
-    <Border Grid.Row="2" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,10,0,0"><DockPanel><TextBlock x:Name="StatusText" Text="Ready" Foreground="{StaticResource MutedText}"/><TextBlock DockPanel.Dock="Right" Text="Frosty · Native migration in progress" Foreground="{StaticResource MutedText}"/></DockPanel></Border>
+    <Border Grid.Row="2" Background="{StaticResource PanelBackground}" BorderBrush="{StaticResource PanelBorder}" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,10,0,0"><DockPanel><TextBlock x:Name="StatusText" Text="Ready" Foreground="{StaticResource MutedText}"/><TextBlock DockPanel.Dock="Right" Text="Frosty · C++ project model with WPF import, clip placement and preview" Foreground="{StaticResource MutedText}"/></DockPanel></Border>
   </Grid>
 </Window>

@@ -1,4 +1,8 @@
 Frosty
 Copyright 2026 Frosty contributors
 
-Frosty's original source code and documentation are licensed under the Apache License, Version 2.0. This notice does not change the licenses of third-party dependencies or separately installed tools. See LICENSE, THIRD_PARTY_NOTICES.md, and RUNTIME_REQUIREMENTS.md.
+Unless a file or third-party notice states otherwise, original Frosty materials in this distribution, including source code, documentation, and project assets created for Frosty, are licensed under the Apache License, Version 2.0. A copy of the license is included in the LICENSE file.
+
+The reference-research documents cite upstream projects reviewed for ideas and workflow concepts. Those citations do not mean that the cited projects' code, media, logos, assets, or repositories are included in or relicensed by Frosty.
+
+Frosty release packages do not bundle FFmpeg or FFprobe. Frosty invokes those programs as external command-line tools that users install separately, under their respective licenses. Electron and other development/build dependencies retain their own licenses and are not relicensed by this notice. See THIRD_PARTY_NOTICES.md for the boundary and upstream references. Redistributors must review the exact components they choose to ship and preserve the third-party license texts and notices required by those licenses. This NOTICE is informational and does not modify the Apache License, Version 2.0.

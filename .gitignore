@@ -1,3 +1,13 @@
 node_modules
 dist
 native/build
+
+# Optional user-managed local media tools (never part of Frosty release archives)
+/tools/ffmpeg.exe
+/tools/ffprobe.exe
+.vs/
+*.user
+native/build-test-runner/
+native/build-p2/
+tools/ffprobe.exe
+*.log

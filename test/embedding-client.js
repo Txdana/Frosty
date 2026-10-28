@@ -1,0 +1,21 @@
+'use strict';
+const assert = require('assert');
+const { withCooldownEmbedding } = require('../lib/embedding-client');
+const vector = [1, 0, 0, 0, 0, 0, 0, 0];
+(async () => {
+  let now = 1000;
+  let calls = 0;
+  const unstable = withCooldownEmbedding(async () => { calls++; if (calls === 1) throw new Error('connection refused'); return vector; }, { cooldownMs: 5000, now: () => now });
+  await assert.rejects(unstable('first'), /connection refused/);
+  assert.strictEqual(unstable.status().coolingDown, true, 'failure opens cooldown');
+  await assert.rejects(unstable('during cooldown'), /temporarily suppressed/);
+  assert.strictEqual(calls, 1, 'cooldown avoids repeated slow calls');
+  now += 5001;
+  assert.deepStrictEqual(await unstable('retry'), vector, 'service is probed again after cooldown');
+  assert.strictEqual(calls, 2);
+  assert.strictEqual(unstable.status().coolingDown, false);
+  const invalid = withCooldownEmbedding(async () => [1, NaN], { cooldownMs: 1000, now: () => now });
+  await assert.rejects(invalid('invalid'), /invalid vector/);
+  assert.strictEqual(invalid.status().consecutiveFailures, 1);
+  console.log('embedding client tests passed (cooldown, retry, vector validation)');
+})().catch((error) => { console.error(error); process.exitCode = 1; });

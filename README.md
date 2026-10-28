@@ -2,7 +2,7 @@
 
 Frosty is an AI-assisted Windows video editor with a native C++20 timeline/project core, a C# WPF desktop application, media analysis, and FFmpeg-based rendering. A legacy Electron editor remains in the repository for development and compatibility, but the one-command installer builds the native Windows application. The native app is still in development and does not yet match every capability of the Electron implementation or a mature professional NLE.
 
-- **Repository:** https://github.com/Txdana/Frosty
+- **Repository:** <https://github.com/Txdana/Frosty>
 - **Platform:** Windows 10/11, x64
 - **License:** Apache-2.0 for original Frosty code and documentation; third-party components retain their own licenses
 
@@ -46,7 +46,7 @@ The native published files are written to `dist/native-windows`. To run the olde
 
 ## FFmpeg and third-party licensing
 
-Frosty does not ship `ffmpeg.exe`, `ffprobe.exe`, or the `ffmpeg-static` npm wrapper. It locates a separately installed FFmpeg using `PATH` or `FROSTY_FFMPEG`; `FROSTY_FFPROBE` can be used to select a specific FFprobe executable. If FFmpeg is absent, the installer offers the `Gyan.FFmpeg` WinGet package. Its manifest declares **GPL-3.0**. This is a separate third-party installation and is not covered by Frosty's Apache-2.0 license. You can decline and install another compatible build. FFmpeg's applicable license depends on the exact build configuration and enabled components; see https://ffmpeg.org/legal.html.
+Frosty does not ship `ffmpeg.exe`, `ffprobe.exe`, or the `ffmpeg-static` npm wrapper. It locates a separately installed FFmpeg using `PATH` or `FROSTY_FFMPEG`; `FROSTY_FFPROBE` can be used to select a specific FFprobe executable. If FFmpeg is absent, the installer offers the `Gyan.FFmpeg` WinGet package. Its manifest declares **GPL-3.0**. This is a separate third-party installation and is not covered by Frosty's Apache-2.0 license. You can decline and install another compatible build. FFmpeg's applicable license depends on the exact build configuration and enabled components; see <https://ffmpeg.org/legal.html>.
 
 Read [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md), [`RUNTIME_REQUIREMENTS.md`](RUNTIME_REQUIREMENTS.md), and [`docs/REFERENCE_INTEGRATION_ATTRIBUTION.md`](docs/REFERENCE_INTEGRATION_ATTRIBUTION.md) before redistributing builds.
 

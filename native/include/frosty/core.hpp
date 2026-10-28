@@ -31,7 +31,7 @@ Project recoverLatestSnapshot(const std::filesystem::path& directory);
 double clipDuration(const Clip& clip);
 double evaluateKeyframe(const Clip& clip, const std::string& prop, double time, double defaultValue);
 enum class EditKind { RippleDelete,InsertGap,Overwrite };
-enum class CommandKind { TimelineEdit, MoveClip, SetClipRange, AddTrack, SetTrackState, RemoveClip, AddClip, SetKeyframe };
+enum class CommandKind { TimelineEdit, MoveClip, SetClipRange, AddTrack, SetTrackState, RemoveClip, AddClip, SplitClip, SetKeyframe, SetEffect, SetClipVolume, SetClipMask, SetClipProperty, SetTransition, DeleteTransition };
 struct TimelineCommand {
   CommandKind kind{CommandKind::TimelineEdit}; EditKind editKind{EditKind::RippleDelete};
   std::string sequenceId, entityId; double start{0}, end{0};
@@ -41,5 +41,5 @@ struct TimelineCommand {
 struct EditResult { bool ok{false}; std::string message; };
 EditResult applyTimelineEdit(Project& project,const std::string& sequenceId,EditKind kind,double start,double end);
 EditResult applyCommand(Project& project,const TimelineCommand& command);
-class CommandHistory { public: explicit CommandHistory(std::size_t limit=100); bool execute(Project&,const std::string&,EditKind,double,double); bool execute(Project&,const TimelineCommand&); bool undo(Project&); bool redo(Project&); std::size_t undoCount()const; std::size_t redoCount()const; private: std::size_t limit_; std::vector<Project> undo_,redo_; };
+class CommandHistory { public: explicit CommandHistory(std::size_t limit=100); bool execute(Project&,const std::string&,EditKind,double,double); bool execute(Project&,const TimelineCommand&); bool execute(Project&,const std::vector<TimelineCommand>&); bool undo(Project&); bool redo(Project&); std::size_t undoCount()const; std::size_t redoCount()const; private: std::size_t limit_; std::vector<Project> undo_,redo_; };
 }

@@ -14,13 +14,18 @@
   <button id="bSave">Save</button>
   <span class="sp"></span>
   <button id="bSettings">Settings</button>
-  <select id="preset"></select>
+  <select id="preset" title="Export profile"></select>
+  <select id="projectFps" title="Project frame rate"></select>
+  <select id="gpuEncoding" title="Video hardware encoding. Auto tries available hardware encoders first and safely falls back to software."><option value="off">GPU encode: Off</option><option value="auto">GPU encode: Auto</option><option value="nvidia">NVIDIA NVENC</option><option value="intel">Intel Quick Sync</option><option value="amd">AMD AMF</option><option value="apple">Apple VideoToolbox</option></select>
+  <label class="chk export-opt"><input id="audioNormalize" type="checkbox"> Loudness normalize</label>
+  <label class="chk export-opt"><input id="audioLimiter" type="checkbox" checked> True-peak limiter</label>
+  <button id="bAnalyze" class="small">Analyze sources</button><label class="chk muted"><input id="analysisTranscribe" type="checkbox"> Include transcript (slower)</label><button id="bScopesNow" class="small" title="Generate scopes from the exact rendered playhead frame">Scopes at playhead</button><button id="bMixMeter" class="small" title="Render a low-resolution pass and measure the actual timeline mix">Measure mix</button>
   <button id="bExport" class="primary">Export MP4</button>
 </header>
 <main>
-  <section id="bin" class="panel"><h3>Media</h3><div id="binList" class="list"></div><button id="bMusic" class="small">+ Background music</button><label class="chk muted"><input id="musicDuck" type="checkbox"> Duck music under dialogue</label><div id="musicName" class="muted"></div></section>
+  <section id="bin" class="panel"><h3>Media</h3><div id="binList" class="list"></div><button id="bMusic" class="small">+ Background music</button><label class="chk muted"><input id="musicDuck" type="checkbox"> Duck music under dialogue</label><div id="musicName" class="muted"></div><div id="musicMixer" class="music-mixer"></div><div class="media-tools"><button id="bProxy" title="Generate a lightweight proxy for the selected clip">Make proxy</button><button id="bProxyToggle" title="Toggle preview proxy use for the selected clip">Toggle proxy</button><button id="bRelink" title="Find missing media in a folder">Relink media</button><button id="bSeqCreate" title="Create a reusable sequence from the current timeline">Create sequence</button><button id="bSeqNest" title="Nest a saved sequence into the current timeline">Nest sequence</button><button id="bSeqEdit" title="Edit a saved sequence or return to the main timeline">Edit sequence</button></div></section>
   <section id="stage" class="panel">
-    <div id="screen"><video id="vid" playsinline></video><div id="ov"></div></div>
+    <div id="screen"><video id="vid" playsinline></video><video id="timelinePlayback" playsinline preload="auto" hidden></video><img id="canonicalPreview" alt="Exact timeline preview frame" hidden><div id="ov"></div></div>
     <div class="transport">
       <button id="bPlay">▶</button><button id="bPrevFrame" title="Previous frame">◀|</button><button id="bNextFrame" title="Next frame">|▶</button><span id="tc">0:00.0 / 0:00.0</span>
       <span class="sp"></span>
@@ -33,18 +38,23 @@
     <h3>AI Editor</h3>
     <textarea id="prompt" placeholder="Describe the edit… e.g. “Make a 30 second highlight reel, cut dead air, add a title at the start.”"></textarea>
     <div class="row"><label><input type="checkbox" id="useTr"> use transcript</label><label><input type="checkbox" id="useFr"> use frames</label><label><input type="checkbox" id="useVid"> send video</label></div>
+    <div class="row wrap permission-row"><strong>Agent permissions</strong><label title="Allows web searches and reading public web pages"><input type="checkbox" id="permWeb"> web access</label><label title="Allows downloading media from a URL"><input type="checkbox" id="permDownloads"> downloads</label><label title="May use a configured image model and incur provider charges"><input type="checkbox" id="permImages"> image generation</label></div>
+    <p class="muted">AI edits are validated and shown for approval before changing the timeline. External actions require explicit permission above.</p>
     <button id="bAI" class="primary">Run AI edit</button>
     <div class="row wrap">
-      <button class="small" id="bSil">Remove silences</button>
+      <button class="small" id="bSil">Remove silences</button><button class="small" id="bAnalyzeSide">Analyze timeline</button>
       <button class="small" id="bCap">Auto-captions</button>
       <button class="small" id="bUrl">Import from URL…</button>
-      <button class="small" id="bDoc">Doctor</button>
+      <button class="small" id="bCopy">Copy video → template…</button><button class="small" id="bReferenceReport" disabled>Reference breakdown</button><button class="small" id="bCompare">Compare reference…</button><button class="small" id="bMotion">Motion Studio…</button><button class="small" id="bMotionEdit">Edit selected graphic</button>
+      <button class="small" id="bDoc">Doctor</button><button class="small" id="bReach">Reach channels</button><button class="small" id="bTranscript">Get transcript…</button><button class="small" id="bReachWeb">Reach web…</button>
       <button class="small" id="bScenes">Split at scenes</button>
       <button class="small" id="bBrag">Launch video…</button>
     </div>
-    <div id="status" class="muted"></div>
+    <div id="status" class="muted"></div><div id="referenceSummary" class="muted"></div><div id="analysisSummary" class="muted"></div><div id="mixMeterSummary" class="muted"></div><div id="audioMeters" class="audio-meters"></div><div id="analysisScopes" class="analysis-scopes"></div>
     <h3>Inspector</h3>
     <div id="insp" class="muted">Select a clip or text.</div>
+    <h3>Track & master effects</h3>
+    <div id="globalEffects" class="muted">Track and master effect stacks.</div>
     <h3>Scene Search (Video-RAG)</h3>
     <div class="row"><button id="bIndex" class="small">Index media</button><label class="chk muted"><input id="indexVision" type="checkbox"> AI visual captions</label></div>
     <div class="row"><input id="sceneQuery" placeholder="Search moments, speech, objects…"><button id="bSceneSearch" class="small">Search</button></div><div id="sceneResults" class="list"></div>
@@ -59,7 +69,14 @@
 
 <dialog id="dSettings"><form method="dialog">
   <h3>Settings</h3>
-  <label>OpenRouter API key<input id="sKey" type="password" placeholder="sk-or-…"></label>
+  <label>OpenRouter API key<input id="sKey" type="password" autocomplete="new-password" placeholder="sk-or-…"></label>
+  <details><summary>Reach provider credentials (optional)</summary>
+    <p class="muted">Credentials are stored using Electron OS encryption when available. Without it they remain in memory only. Use scoped API tokens and never share the settings file.</p>
+    <label>GitHub personal access token<input id="sReachGithub" type="password" autocomplete="new-password" placeholder="github_pat_…"></label>
+    <label>Reddit OAuth access token<input id="sReachReddit" type="password" autocomplete="new-password" placeholder="Bearer token (already issued by Reddit OAuth)"></label>
+    <label>X API v2 bearer token<input id="sReachX" type="password" autocomplete="new-password" placeholder="X API bearer token"></label>
+    <label>YouTube Data API key<input id="sReachYoutube" type="password" autocomplete="new-password" placeholder="AIza…"></label>
+  </details>
   <label>Editing model (any OpenRouter model)<input id="sModel" list="modelList" placeholder="google/gemini-2.5-flash"></label>
   <datalist id="modelList"></datalist>
   <div id="mInfo" class="muted"></div>
@@ -73,16 +90,35 @@
 
 <dialog id="dUrl"><form method="dialog"><h3>Import video from URL</h3><label>YouTube / X / Reddit / TikTok / Bilibili link<input id="uUrl" placeholder="https://…"></label><div class="row"><button value="cancel">Cancel</button><button id="uOk" value="ok" class="primary">Download</button></div></form></dialog>
 
+<dialog id="dCopy"><form method="dialog"><h3>Copy video → editable template</h3><p class="muted">Paste a video link or choose a reference. Frosty measures scene cuts, shot pacing, global motion, audio transients and possible beat alignment. With AI refinement enabled, a batched vision pass compares start/middle/end frames across the whole reference to estimate visible text, typography, graphic layout, animation and transition hypotheses; the editing agent then uses that evidence to build an editable timeline. Estimates are reviewable, not guaranteed recovery of the original project. Maximum source length: 2 minutes.</p><label>Video URL<input id="cUrl" placeholder="https://…" required></label><label class="chk"><input id="cCaptions" type="checkbox" checked> Add timed transcript captions when available</label><label class="chk"><input id="cAI" type="checkbox" checked> Refine with AI visual comparison (uses configured API; optional)</label><div id="copyInfo" class="muted"></div><div class="row"><button value="cancel">Cancel</button><button type="button" id="cInspect" class="small">Check link</button><button id="cGo" type="button" class="primary">Analyze and create template</button></div></form></dialog>
+
+<dialog id="dReferenceReport" class="wide-dialog reference-report-dialog"><form method="dialog"><h3>Reference breakdown · editable shot blueprint</h3><p class="muted">Measured cuts, pacing, transcript coverage, estimated audio rhythm, camera-motion candidates and transition evidence. The AI style guide and temporal frame evidence are hypotheses; zoom/pan can confuse camera and subject movement, and a flattened video cannot expose the original editor keyframes or missing assets. Select a shot to move the playhead there.</p><div class="row"><button type="button" id="rExport" class="small">Export analysis JSON</button><span class="sp"></span><button value="cancel">Close</button></div><div id="referenceReportSummary" class="muted"></div><div id="referenceReportRows" class="reference-report-rows"></div></form></dialog>
+
+<dialog id="dMotion" class="wide-dialog"><form method="dialog"><h3>Motion Studio · Editable vector graphics</h3><p class="muted">Generate native transparent overlays and insert them directly onto the timeline. These same graphics and keyframe presets are available to Frosty's AI editor.</p><div class="motion-studio-grid"><div><label>Graphic type<select id="mType"><option value="title-card">Title card</option><option value="lower-third">Lower third</option><option value="stat">Stat / number</option><option value="feature">Feature callout</option><option value="quote">Quote</option><option value="kinetic-caption">Kinetic caption</option><option value="wireframe-cube">Wireframe cube</option><option value="wireframe-sphere">Wireframe sphere</option><option value="wireframe-cylinder">Wireframe cylinder</option><option value="orbit">Orbit</option><option value="perspective-grid">Perspective grid</option><option value="network">Network line art</option></select></label><label>Theme<select id="mTheme"><option value="studio">Studio</option><option value="editorial">Editorial</option><option value="signal">Signal</option><option value="cobalt">Cobalt</option><option value="peach">Peach</option><option value="mono">Monochrome</option></select></label><label>3D line-art geometry<select id="mShape"><option value="wireframe-cube">Wireframe cube</option><option value="wireframe-sphere">Wireframe sphere</option><option value="wireframe-cylinder">Wireframe cylinder</option><option value="orbit">Orbit</option><option value="perspective-grid">Perspective grid</option><option value="network">Network</option></select></label><label>Animation<select id="mAnim"><option value="fade-up">Fade up</option><option value="pop-in">Pop in</option><option value="slide-left">Slide left</option><option value="slide-right">Slide right</option><option value="drift-zoom">Drift zoom</option><option value="rotate-in">Rotate in</option><option value="pulse">Pulse</option><option value="none">None</option></select></label><label>Headline / caption<input id="mTitle" maxlength="180" value="Make it move."></label><label>Supporting line<input id="mSubtitle" maxlength="300" value="Editable motion graphics"></label><label>Accent colour<input id="mAccent" type="color" value="#7ce7d4"></label><div class="row rotation-controls"><label>3D rotate X <input id="mRotX" type="range" min="-180" max="180" step="1" value="-24"><output id="mRotXVal">-24°</output></label><label>3D rotate Y <input id="mRotY" type="range" min="-180" max="180" step="1" value="33"><output id="mRotYVal">33°</output></label><label>3D rotate Z <input id="mRotZ" type="range" min="-180" max="180" step="1" value="14"><output id="mRotZVal">14°</output></label></div><div class="row"><label>Start time (s)<input id="mStart" type="number" min="0" max="86400" step="0.1" value="0"></label><label>Duration (s)<input id="mDuration" type="number" min="0.2" max="120" step="0.1" value="4"></label></div><div class="row"><button type="button" id="mRefresh" class="small">Refresh preview</button><span class="sp"></span><button value="cancel">Close</button><button type="button" id="mAdd" class="primary">Add overlay to timeline</button></div></div><div class="motion-preview-wrap"><img id="motionPreview" alt="Motion graphic preview"><p id="motionStatus" class="muted">Preview updates when you refresh.</p></div></div></form></dialog>
+<dialog id="dCompare" class="wide-dialog compare-dialog"><form method="dialog"><h3>Reference comparison · synchronized playback</h3><p class="muted">Compare the source and a fresh render. Use <b>Measure difference</b> for a low-resolution, same-time visual error estimate, worst-frame list, duration delta and cut-timing agreement. This guides iteration; its SSIM-like metric is approximate and is not a proof of pixel-perfect identity.</p><div class="row"><label>View<select id="cmpMode"><option value="side">Side by side</option><option value="wipe">Wipe reveal</option></select></label><label id="cmpWipeLabel" hidden>Reference reveal<input id="cmpWipe" type="range" min="5" max="95" value="50"></label><label class="chk"><input type="checkbox" id="cmpRefAudio"> Play reference audio instead</label></div><div id="compareStages" class="compare-stages"><div class="compare-pane reference-pane"><span>REFERENCE</span><video id="cmpRef" playsinline preload="auto"></video></div><div class="compare-pane result-pane"><span>FROSTY TIMELINE</span><video id="cmpResult" playsinline preload="auto"></video></div></div><div class="row compare-transport"><button type="button" id="cmpPlay" class="primary">▶ Play both</button><button type="button" id="cmpPause">Pause</button><input id="cmpSeek" type="range" min="0" max="1000" value="0"><span id="cmpTime" class="muted">0:00 / 0:00</span></div><div id="cmpStatus" class="muted"></div><div id="cmpMetrics" class="compare-metrics muted"></div><div class="row"><button type="button" id="cmpMeasure" class="small">Measure difference</button><span class="sp"></span><button value="cancel" id="cmpClose">Close comparison</button></div></form></dialog>
 <dialog id="dBrag"><form method="dialog">
-  <h3>Launch video</h3>
-  <label>Project name<input id="gName"></label>
-  <label>Tagline<input id="gTag"></label>
-  <label>Features (one per line)<textarea id="gFeat" rows="5"></textarea></label>
-  <label class="chk"><input type="checkbox" id="gAI" checked> Let AI write the scenes</label>
-  <div class="row"><button value="cancel">Cancel</button><button id="gOk" value="ok" class="primary">Create</button></div>
+  <h3>Brag · launch storyboard</h3>
+  <label>Project name<input id="gName" placeholder="Product or project name"></label>
+  <label>Tagline<input id="gTag" placeholder="What makes it worth noticing?"></label>
+  <label>Features (one per line)<textarea id="gFeat" rows="4" placeholder="Feature one&#10;Feature two"></textarea></label>
+  <label class="chk"><input type="checkbox" id="gAI" checked> Let AI draft the storyboard (falls back to local templates)</label>
+  <div class="row"><button value="cancel">Cancel</button><button id="gOk" value="ok" class="primary">Draft storyboard</button></div>
 </form></dialog>
+<dialog id="dStoryboard" class="wide-dialog"><form method="dialog">
+  <h3>Edit storyboard</h3><p class="muted">Edit each scene, reorder or remove cards, attach an imported product image, and optionally add a soundtrack. Nothing is rendered until you choose Render.</p>
+  <div class="row"><button type="button" id="bsAdd" class="small">+ Scene</button><button type="button" id="bsProduct" class="small">Import product image</button><button type="button" id="bsMusic" class="small">Choose soundtrack</button><button type="button" id="bsSave" class="small">Save draft…</button><button type="button" id="bsOpen" class="small">Open draft…</button><span id="bsMusicName" class="muted">No soundtrack selected</span></div>
+  <div class="row brag-render-settings"><label>Scene duration <select id="bsSceneSec"><option value="2">2 seconds</option><option value="3" selected>3 seconds</option><option value="4">4 seconds</option><option value="5">5 seconds</option><option value="6">6 seconds</option><option value="8">8 seconds</option><option value="10">10 seconds</option></select></label><label>Output size <select id="bsResolution"><option value="1280x720" selected>HD 720p · 16:9</option><option value="1920x1080">Full HD 1080p · 16:9</option><option value="1080x1920">Vertical · 9:16</option><option value="1080x1080">Square · 1:1</option><option value="3840x2160">4K · 16:9</option></select></label><label>Frame rate <select id="bsFps"><option value="24">24 fps</option><option value="25">25 fps</option><option value="30" selected>30 fps</option><option value="50">50 fps</option><option value="60">60 fps</option></select></label><span id="bsDuration" class="muted">Estimated duration: 0:00</span></div>
+  <div id="bsScenes" class="storyboard-list"></div>
+  <h4>Social share copy</h4><div class="row"><select id="bsPlatform"><option value="general">General</option><option value="youtube">YouTube</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="linkedin">LinkedIn</option><option value="x">X</option></select><input id="bsShareUrl" placeholder="Optional product / launch URL"></div>
+  <textarea id="bsShareCopy" rows="4" placeholder="Generated share copy appears here"></textarea>
+  <div class="row"><button type="button" id="bsMakeCopy" class="small">Generate copy</button><button type="button" id="bsCopyText" class="small">Copy text</button><span class="sp"></span><button value="cancel">Cancel</button><button type="button" id="bsRender" class="primary">Render launch video</button></div>
+</form></dialog>
+<dialog id="dReachWeb" class="wide-dialog"><form method="dialog"><h3>Reach · web search and reading</h3><div class="row"><select id="rwMode"><option value="search">Search web</option><option value="read">Read URL</option></select><input id="rwInput" placeholder="Search query or https:// URL" required><button type="button" id="rwGo" class="primary">Run</button></div><div id="rwInfo" class="muted"></div><div id="rwResults" class="list"></div><pre id="rwText" class="reach-text"></pre><div class="row"><button value="cancel">Close</button></div></form></dialog>
+<dialog id="dTranscript"><form method="dialog"><h3>Reach · transcript extraction</h3><p class="muted">Fetches public English captions through yt-dlp. If no captions are available, download the source and use local Whisper transcription.</p><label>Public video URL<input id="rtUrl" placeholder="https://…" required></label><div id="rtInfo" class="muted"></div><textarea id="rtText" rows="9" placeholder="Transcript will appear here"></textarea><div class="row"><button value="cancel">Close</button><button type="button" id="rtFetch" class="primary">Fetch captions</button><button type="button" id="rtCopy" class="small">Copy transcript</button></div></form></dialog>
 
 <script src="../lib/timeline.js"></script>
+<script src="../lib/bezier-mask.js"></script>
+<script src="../lib/motion-design.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

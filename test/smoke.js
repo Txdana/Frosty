@@ -5,8 +5,15 @@ const os = require('os');
 const path = require('path');
 const ff = require('../lib/ffmpeg');
 const TL = require('../lib/timeline');
+const renderEngine = require('../lib/render-engine');
 
 const sceneIndex = require('../lib/scene-index');
+const reach = require('../lib/reach');
+const yt = reach.classifyUrl('https://www.youtube.com/watch?v=abc');
+assert.strictEqual(yt.platform, 'youtube', 'Reach classifies YouTube URLs');
+assert.strictEqual(yt.adapter, 'video+captions', 'YouTube routes to the video and subtitle adapter');
+assert.strictEqual(reach.classifyUrl('https://github.com/OpenShot/openshot-qt').platform, 'github', 'Reach classifies GitHub URLs');
+assert(reach.platformCapabilities().some((p) => p.platform === 'instagram' && p.adapter === 'video-limited'), 'Reach reports limitations rather than claiming full Instagram parity');
 const sceneTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'frosty-index-test-'));
 const sceneIndexPath = path.join(sceneTmp, 'index.json');
 sceneIndex.save(sceneIndexPath, { version: 1, scenes: [
@@ -200,6 +207,35 @@ assert.strictEqual(animClip.keyframes.alpha[0].v, 0.5, 'AI keyframe operation');
   const deleteMainTrack = TL.clone(freeTl); const delMainTrackResult = TL.deleteVideoTrack(deleteMainTrack, 2); assert(delMainTrackResult.ok && !deleteMainTrack.video.some((c) => c.track === 2), 'deleting a video track removes main video clips assigned to it');
   const modeOps = TL.empty(); TL.addClip(modeOps, m); TL.applyOps(modeOps, [{ op: 'set_timeline_mode', mode: 'free' }, { op: 'move_clip_to_time', clip_id: modeOps.video[0].id, start: 2.5 }]);
   assert(modeOps.mode === 'free' && modeOps.video[0].start === 2.5, 'AI timeline mode and clip positioning operations');
+
+  // Frame-accurate preview engine: rational timebases, exact-frame JPEG output, cache hits, and transition frames.
+  const rateTest = TL.empty(); TL.setFrameRate(rateTest, '24000/1001');
+  assert.strictEqual(TL.frameRateString(rateTest), '24000/1001', 'fractional project frame rate persists as a rational');
+  assert.strictEqual(TL.secondsToFrame(1, rateTest), 24, 'seconds map to nearest integer frame');
+  assert(Math.abs(TL.frameToSeconds(24, rateTest) - 1.001) < 1e-9, 'frame time uses the exact rational rate');
+  const previewTl = TL.empty(); TL.addClip(previewTl, m);
+  TL.addText(previewTl, 'Exact preview frame', 0, 2);
+  TL.setFrameRate(previewTl, '30000/1001');
+  const previewFrame = await renderEngine.renderPreviewFrame(previewTl, 12, { width: 320, height: 180, fps: TL.frameRateString(previewTl) });
+  assert(previewFrame.dataUrl.startsWith('data:image/jpeg;base64,') && previewFrame.frame === 12, 'preview renderer returns the requested frame as JPEG data URL');
+  assert(previewFrame.width === 320 && previewFrame.height === 180 && previewFrame.fps === '30000/1001', 'preview renderer reports its dimensions and rational rate');
+  assert(Buffer.from(previewFrame.dataUrl.split(',')[1], 'base64').subarray(0, 2).equals(Buffer.from([0xff, 0xd8])), 'preview output is a valid JPEG');
+  const cachedPreview = await renderEngine.renderPreviewFrame(previewTl, 12, { width: 320, height: 180, fps: TL.frameRateString(previewTl) });
+  assert.strictEqual(cachedPreview.cached, true, 'repeated preview requests reuse cached frame data');
+  const abortPreview = new AbortController(); abortPreview.abort();
+  await assert.rejects(renderEngine.renderPreviewFrame(previewTl, 13, { width: 320, height: 180, fps: '30000/1001', signal: abortPreview.signal }), { name: 'AbortError' });
+  const transitionStartPreview = await renderEngine.renderPreviewFrame(t2, 30, { width: 320, height: 180, fps: '30' });
+  const transitionPreview = await renderEngine.renderPreviewFrame(t2, 36, { width: 320, height: 180, fps: '30' });
+  assert(transitionPreview.dataUrl.startsWith('data:image/jpeg;base64,') && transitionPreview.frame === 36, 'transition preview renders the requested project frame, not the start frame');
+  assert.notStrictEqual(transitionPreview.dataUrl, transitionStartPreview.dataUrl, 'preview output changes as the requested transition frame changes');
+  const freePreview = await renderEngine.renderPreviewFrame(freeTl, 60, { width: 320, height: 180, fps: '30' });
+  assert(freePreview.dataUrl.startsWith('data:image/jpeg;base64,') && freePreview.frame === 60, 'free-timeline preview composites overlapping main clips and overlay tracks');
+  // Continuous playback preview is a CFR movie built through the same export graph.
+  const playbackMovie = path.join(dir, 'playback-preview.mp4');
+  await ff.exportTimeline(previewTl, playbackMovie, { width: 320, height: 180, fps: TL.frameRateString(previewTl), crf: 30, audioBitrate: '96k' });
+  const playbackProbe = await ff.probe(playbackMovie);
+  assert(playbackProbe.hasVideo && playbackProbe.hasAudio && playbackProbe.width === 320, 'continuous playback render contains video and the timeline audio mix at preview resolution');
+  assert(Math.abs(playbackProbe.duration - TL.duration(previewTl)) < 0.4, 'continuous playback render duration matches timeline duration');
 
   const th = await ff.thumb(src, path.join(dir, 't.jpg')); const wv = await ff.waveform(src, path.join(dir, 'w.png'));
   assert(fs.statSync(th).size > 500 && fs.statSync(wv).size > 500, 'thumb/wave');

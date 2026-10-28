@@ -8,8 +8,25 @@
   "scripts": {
     "start": "electron .",
     "test": "node test/ffmpeg-license-boundary.js && node test/run-all.js",
-    "dist": "electron-builder --win nsis portable",
-    "dist:win": "electron-builder --win nsis"
+    "dist": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-native.ps1",
+    "dist:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-native.ps1",
+    "test:media": "node test/media-workflow.js && node test/sequence-render-runtime.js",
+    "test:analysis": "node test/analysis-static.js && node test/color-audio-production.js && node test/scene-index.js",
+    "test:brag-reach": "node test/brag-reach.js",
+    "test:agent-safety": "node test/agent-safety.js",
+    "test:frame-preview": "node test/frame-preview-playback.js",
+    "test:effects": "node test/effect-stack-static.js && node test/effect-stack-runtime.js",
+    "test:color-audio": "node test/analysis-static.js && node test/color-audio-production.js",
+    "test:reach": "node test/brag-reach.js",
+    "test:bezier-mask": "node test/bezier-mask-runtime.js",
+    "test:project-format": "node test/project-format.js",
+    "native:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-native.ps1",
+    "electron:dist": "electron-builder --win nsis portable",
+    "electron:dist:win": "electron-builder --win nsis",
+    "test:native-render": "node test/native-transform-render.js",
+    "test:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File test/windows-e2e.ps1",
+    "test:native": "cmake -S native -B native/build-test-runner -DCMAKE_BUILD_TYPE=Release && cmake --build native/build-test-runner --config Release --parallel 2 && ctest --test-dir native/build-test-runner -C Release --output-on-failure",
+    "test:semantic-search": "node test/scene-index.js && node test/embedding-client.js"
   },
   "devDependencies": {
     "electron": "^33.0.0",
@@ -45,8 +62,15 @@
       "createStartMenuShortcut": true,
       "shortcutName": "Frosty",
       "uninstallDisplayName": "Frosty",
-      "artifactName": "Frosty-Setup-${version}.${ext}"
+      "artifactName": "Frosty-Setup-${version}.${ext}",
+      "include": "build/installer.nsh"
     },
-    "artifactName": "Frosty-${version}-${arch}.${ext}"
+    "artifactName": "Frosty-${version}-${arch}.${ext}",
+    "extraResources": [
+      {
+        "from": "scripts/install-ffmpeg.ps1",
+        "to": "scripts/install-ffmpeg.ps1"
+      }
+    ]
   }
 }

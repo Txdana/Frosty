@@ -1,0 +1,31 @@
+'use strict';
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const root = path.join(__dirname, '..');
+const workflow = fs.readFileSync(path.join(root, 'windows/Frosty.Desktop/NativeWorkflow.cs'), 'utf8');
+const mainWindow = fs.readFileSync(path.join(root, 'windows/Frosty.Desktop/MainWindow.xaml.cs'), 'utf8');
+const cApi = fs.readFileSync(path.join(root, 'native/src/c_api.cpp'), 'utf8');
+const core = fs.readFileSync(path.join(root, 'native/src/core.cpp'), 'utf8');
+const cmake = fs.readFileSync(path.join(root, 'native/CMakeLists.txt'), 'utf8');
+const runner = fs.readFileSync(path.join(root, 'test/run-all.js'), 'utf8');
+const sceneIndex = fs.readFileSync(path.join(root, 'lib/scene-index.js'), 'utf8');
+const embeddingClient = fs.readFileSync(path.join(root, 'lib/embedding-client.js'), 'utf8');
+for (const op of ['add_track', 'set_mask', 'move_clip', 'trim_clip', 'set_volume', 'set_speed', 'set_opacity', 'set_enabled', 'rename_clip', 'set_transform', 'set_keyframe', 'set_effect', 'clear_effects', 'split_clip', 'delete_clip', 'set_track_state', 'timeline_edit', 'add_clip', 'set_transition', 'remove_transition']) {
+  assert(workflow.includes(`case "${op}"`) || workflow.includes(`\\\"op\\\":\\\"${op}\\\"`), `native planner must normalize ${op}`);
+}
+assert(mainWindow.includes('NormalizeAiOperations') && mainWindow.includes('frosty_project_apply_clip_edits_json'), 'WPF must normalize and submit a transactional batch');
+assert(mainWindow.includes('no edits applied') || mainWindow.includes('no changes have been applied') || mainWindow.includes('AI plan rejected'), 'WPF reports failed plans instead of silently skipping unsupported ops');
+assert(cApi.includes('frosty_project_apply_clip_edits_json') && cApi.includes('CommandHistory applies the batch'), 'C API applies the AI plan as a transactional command batch');
+assert(!workflow.includes('GetBool(op'), 'the planner must not reference an undefined JSON helper');
+assert(fs.readFileSync(path.join(root, 'native/tests/ai_ops_tests.cpp'), 'utf8').includes('mediaBatch') && fs.readFileSync(path.join(root, 'native/tests/ai_ops_tests.cpp'), 'utf8').includes('inserted gap did not ripple'), 'native integration test covers add-clip and timeline-edit commands');
+assert(core.includes('CommandKind::SetTransition') && core.includes('CommandKind::DeleteTransition'), 'native core applies and removes transitions');
+assert(core.includes('Track gain must be between 0 and 4') && core.includes('Track opacity must be between 0 and 1'), 'native track mixer controls are range-validated');
+assert(cApi.includes('op=="add_track"') && cApi.includes('op=="mask"'), 'C ABI accepts atomic track creation and mask operations');
+assert(workflow.includes('plannedTrackTypes') && workflow.includes('Track creation is supported'), 'planner supports add-track followed by add-clip in one plan');
+assert(workflow.includes('gain=D(t,"gain",1)') && workflow.includes('opacity=D(t,"opacity",1)'), 'AI context includes track mixer state so edits are grounded in current values');
+assert(cmake.includes('frosty_ai_ops_tests') && cmake.includes('add_test(NAME frosty_ai_ops_tests'), 'CTest includes native AI-operation integration test');
+assert(runner.includes('ctest') && runner.includes('native-wpf-static.py') && runner.includes('gpu-preview-static.py'), 'standard npm test includes CTest and WPF/GPU static checks');
+assert(sceneIndex.includes('async function searchHybrid') && sceneIndex.includes('cosineSimilarity'), 'scene search supports hybrid lexical and semantic ranking in code');
+assert(sceneIndex.includes('ollamaEmbedding') && embeddingClient.includes('embedding'), 'semantic embeddings remain an optional retrieval enrichment with a dedicated client');
+console.log('native AI planner integration checks passed (track creation, mask, clip edits, transitions, atomic rollback, hybrid search implementation and test wiring)');

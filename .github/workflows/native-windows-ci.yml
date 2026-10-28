@@ -1,0 +1,37 @@
+name: Native Windows validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows-native:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install Boost.PropertyTree headers
+        shell: pwsh
+        run: |
+          vcpkg install boost-property-tree:x64-windows
+          "BOOST_ROOT=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\include" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: Run complete portable suite, native CTest, WPF/GPU source audits and Windows WPF smoke test
+        run: npm test
+      - name: Upload published native WPF smoke-test build
+        if: always() && hashFiles('dist/native-windows-e2e/Frosty.exe') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: frosty-native-windows-e2e
+          path: dist/native-windows-e2e/
+          if-no-files-found: warn

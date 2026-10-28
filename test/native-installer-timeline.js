@@ -1,0 +1,107 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.join(__dirname, '..');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const pkg = JSON.parse(read('package.json'));
+const installer = read('installer.ps1');
+const ffmpegInstaller = read('scripts/install-ffmpeg.ps1');
+const nativeReleaseInstaller = read('scripts/Install-Frosty.ps1');
+const buildNative = read('scripts/build-native.ps1');
+const packageNative = read('scripts/package-native.ps1');
+const xaml = read('windows/Frosty.Desktop/MainWindow.xaml');
+const windowCs = read('windows/Frosty.Desktop/MainWindow.xaml.cs');
+const workflow = read('windows/Frosty.Desktop/NativeWorkflow.cs');
+const mediaPaths = read('windows/Frosty.Desktop/MediaToolPaths.cs');
+const coreHeader = read('native/include/frosty/core.hpp');
+const cApi = read('native/src/c_api.cpp');
+const cHeader = read('native/include/frosty/c_api.h');
+const core = read('native/src/core.cpp');
+
+// The default install/release path must be native WPF, with Electron available only via explicit opt-in scripts.
+assert.match(installer, /scripts[\\/]build-native\.ps1/i, 'installer invokes the native C++/WPF build');
+assert.match(installer, /Checking external FFmpeg prerequisite/i, 'installer checks the external FFmpeg prerequisite');
+assert.match(installer, /-InstallIfMissing/, 'source installer offers automatic FFmpeg installation');
+assert.match(installer, /Install FFmpeg now\? \[Y\/n\]/, 'source installer requests user consent');
+assert.match(ffmpegInstaller, /Gyan\.FFmpeg/, 'FFmpeg helper uses the reviewed WinGet package');
+assert.match(ffmpegInstaller, /--silent/);
+assert.match(nativeReleaseInstaller, /Programs\\Frosty/, 'native release installer installs into the user application folder');
+assert.match(buildNative, /Install-Frosty\.ps1/, 'native release includes a guided PowerShell installer');
+assert.match(buildNative, /Install-Frosty\.cmd/, 'native release includes a double-click installer launcher');
+assert.match(installer, /dist\\native-windows/i, 'installer expects the native WPF publish directory');
+assert.match(installer, /Frosty\.exe/, 'installer requires and launches the native executable');
+assert.match(installer, /no Electron fallback/i, 'installer does not silently fall back to Electron');
+assert.doesNotMatch(installer, /(^|\n)\s*(electron-builder|npm\s+run\s+dist:win|.*electron:dist)(\s|$)/i, 'installer does not invoke Electron packaging');
+assert.match(buildNative, /Visual Studio 17 2022/, 'native build fixes the supported Windows CMake generator');
+assert.match(buildNative, /ctest --test-dir native\/build/, 'native build runs native regression tests');
+assert.match(buildNative, /dotnet publish .*--self-contained true/s, 'native WPF is self-contained for end-user installs');
+assert.match(buildNative, /Checking external FFmpeg runtime/i, 'native build verifies FFmpeg without bundling it');
+assert.doesNotMatch(buildNative, /node_modules[\/]ffmpeg-static/i, 'native build must not use GPL ffmpeg-static npm wrapper');
+assert.match(packageNative, /Frosty-Native-win-x64/, 'release artifact names identify the native Windows app');
+assert.match(packageNative, /npm test[\s\S]*build-native\.ps1/, 'native package runs regression suite before native build');
+assert.match(pkg.scripts.dist, /package-native\.ps1/, 'normal distribution script creates native output');
+assert.match(pkg.scripts['electron:dist'], /electron-builder/, 'Electron packaging remains a deliberately separate opt-in script');
+
+// Verify a visual Canvas timeline and the critical edit paths are wired, not only described in documentation.
+assert.match(xaml, /x:Name="TimelineCanvas"/);
+assert.match(xaml, /MouseLeftButtonDown="TimelineCanvas_MouseLeftButtonDown"/);
+assert.match(xaml, /MouseMove="TimelineCanvas_MouseMove"/);
+assert.match(xaml, /MouseLeftButtonUp="TimelineCanvas_MouseLeftButtonUp"/);
+for (const label of ['Split selected at playhead', 'Insert 1s gap at playhead', 'Ripple delete 1s at playhead', 'Ripple delete selected', 'Snap', 'Ripple trim', 'Zoom +', 'Zoom −']) {
+  assert.ok(xaml.includes(label), `timeline control missing: ${label}`);
+}
+for (const feature of ['RenderTimelineCanvas', 'SnapTimelineTime', 'TimelineSplitAtPlayhead_Click', 'TimelineSelectAll_Click', 'TimelineInsertGap_Click', 'TimelineRippleDeleteRange_Click', 'RippleDeleteSelected_Click', 'ApplyClipEditOperations', 'TimelineCanvas_MouseMove', 'TimelineCanvas_MouseLeftButtonUp', 'MainWindow_PreviewKeyDown', 'ClipNameText', 'ClipEnabledCheck', 'ClipVolumeText', 'ClipShearXText', 'ClipShearYText', 'RefreshTimeline()']) {
+  assert.ok(windowCs.includes(feature), `timeline editing implementation missing: ${feature}`);
+}
+assert.match(coreHeader, /SplitClip/);
+assert.match(core, /Clip split/);
+assert.match(cHeader, /frosty_project_apply_clip_edits_json/);
+assert.match(cApi, /op=="split"/);
+assert.match(cApi, /x->history\.execute\(x->project,commands\)/, 'batched WPF edits use native undoable transactions');
+for (const property of ['playbackRate', 'transform.x', 'transform.y', 'transform.scaleX', 'transform.scaleY', 'transform.rotation', 'transform.shearX', 'transform.shearY', 'opacity', 'enabled', 'volume']) {
+  assert.ok(core.includes(`"${property}"`) || core.includes(`"${property}`) || core.includes(property), `native clip property is not represented: ${property}`);
+}
+assert.match(workflow, /scale=w='max\(2,iw\*max\(0\.05,min\(8,/);
+assert.match(workflow, /KeyframeExpression\(c.Keyframes/);
+assert.match(workflow, /RenderSequenceToFileAsync/);
+assert.match(workflow, /RenderPreviewAudioAsync/);
+assert.match(workflow, /textOverlays/);
+assert.match(workflow, /transitionRows/);
+assert.match(workflow, /AppendLegacyFx/);
+assert.match(workflow, /GetLegacyTrackEffects/);
+assert.match(workflow, /GetLegacyMasterEffects/);
+assert.match(workflow, /EffectExpression/);
+assert.match(workflow, /GetClipKeyframes/);
+assert.match(workflow, /FindLegacyEffectKeyframes/);
+assert.match(workflow, /TryGetProperty\("keyframes"/);
+assert.match(workflow, /master effects apply on export, not live preview|HasLegacyMasterEffects/);
+assert.match(workflow, /not implemented by the native renderer yet/);
+assert.match(workflow, /rotate=a=/);
+assert.match(workflow, /shear=shx=/);
+assert.match(workflow, /ShearX/);
+assert.match(workflow, /geq=r='r\(X,Y\)':g='g\(X,Y\)':b='b\(X,Y\)':a='alpha\(X,Y\)\*max/);
+assert.match(workflow, /crop=\{width\}:\{height\}/);
+assert.match(workflow, /MediaToolPaths\.Ffmpeg/);
+const gpuHost = read('windows/Frosty.Desktop/GpuPreviewHost.cs');
+assert.match(gpuHost, /StartTimelineAsync/);
+assert.match(gpuHost, /_frameWidth=Math\.Clamp/);
+assert.match(gpuHost, /_projectFps=Math\.Clamp/);
+assert.match(gpuHost, /RenderPreviewAudioAsync/);
+assert.match(gpuHost, /CreateTextOverlay/);
+assert.match(gpuHost, /KeyframeExpr/);
+assert.match(gpuHost, /BuildEffectFilters/);
+assert.match(gpuHost, /ApplySpatialTransitions/);
+assert.match(gpuHost, /MediaPlayer/);
+assert.doesNotMatch(gpuHost, /fps=30/);
+assert.doesNotMatch(gpuHost, /scale=1280:720/);
+// Every native mutation should re-read the authoritative project so the visible timeline is never stale.
+assert.match(windowCs, /if \(imported > 0\) \{ MarkDirty\(\); RefreshTimeline\(\); \}/);
+assert.match(windowCs, /MarkDirty\(\); RefreshTimeline\(\); StatusText\.Text = \$"Added \{type\} track \{name\}\."/, 'track creation refreshes the native model');
+assert.match(windowCs, /MarkDirty\(\); RefreshTimeline\(\); StatusText\.Text = message;/);
+assert.match(windowCs, /private void Undo_Click[\s\S]*?MarkDirty\(\); RefreshTimeline\(\)/);
+assert.match(windowCs, /private void Redo_Click[\s\S]*?MarkDirty\(\); RefreshTimeline\(\)/);
+assert.match(mediaPaths, /AppContext\.BaseDirectory/);
+assert.match(mediaPaths, /FROSTY_FFMPEG/);
+
+console.log('Native installer/timeline/export/preview source checks passed: native packaging, visual timeline, nested-sequence render path, text overlays, transition/keyframe/effect handling, project-sized/rate GPU frames and mixed audio monitor.');
