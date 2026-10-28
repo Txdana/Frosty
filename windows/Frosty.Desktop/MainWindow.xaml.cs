@@ -1152,6 +1152,68 @@ public partial class MainWindow : Window
         win.ShowDialog();
     }
 
+    private void UninstallFrosty_Click(object sender, RoutedEventArgs e)
+    {
+        var confirmation = MessageBox.Show(
+            this,
+            "Remove Frosty from this Windows account? The app and its shortcuts will be removed. Saved .frosty projects, original media, recovery snapshots, the source snapshot, FFmpeg, and build tools will be kept.",
+            "Uninstall Frosty",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirmation != MessageBoxResult.Yes) return;
+
+        var uninstallScript = System.IO.Path.Combine(AppContext.BaseDirectory, "Uninstall-Frosty.ps1");
+        if (!System.IO.File.Exists(uninstallScript))
+        {
+            MessageBox.Show(this,
+                "The uninstaller is missing from this installation. Reinstall Frosty using the latest installer, then try again.",
+                "Cannot uninstall Frosty", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        if (_dirty)
+        {
+            CreateRecoverySnapshot();
+            var discardConfirmation = MessageBox.Show(
+                this,
+                "This project has unsaved changes. Frosty attempted to create a recovery snapshot, but the latest changes may not be in your saved .frosty project. Continue uninstalling?",
+                "Unsaved project changes",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+            if (discardConfirmation != MessageBoxResult.Yes) return;
+        }
+
+        try
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "powershell.exe",
+                WorkingDirectory = System.IO.Path.GetTempPath(),
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            startInfo.ArgumentList.Add("-NoProfile");
+            startInfo.ArgumentList.Add("-ExecutionPolicy");
+            startInfo.ArgumentList.Add("Bypass");
+            startInfo.ArgumentList.Add("-File");
+            startInfo.ArgumentList.Add(uninstallScript);
+            startInfo.ArgumentList.Add("-Quiet");
+            startInfo.ArgumentList.Add("-WaitForProcessId");
+            startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
+            _ = Process.Start(startInfo) ?? throw new InvalidOperationException("Windows did not start the uninstaller.");
+            _dirty = false;
+            StatusText.Text = "Uninstall started. Frosty will now close.";
+            Close();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Could not start the uninstaller: " + ex.Message,
+                "Uninstall Frosty", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         if (_dirty)
