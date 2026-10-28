@@ -16,8 +16,16 @@ if ([System.IO.Path]::GetDirectoryName($installDirFull) -ine $programsRoot -or
 
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Frosty'
 if (-not (Test-Path -LiteralPath $installDirFull)) {
+    $staleStartMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
+    $staleShortcuts = @(
+        (Join-Path $staleStartMenu 'Frosty.lnk'),
+        (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Frosty.lnk')
+    )
+    foreach ($shortcut in $staleShortcuts) {
+        Remove-Item -LiteralPath $shortcut -Force -ErrorAction SilentlyContinue
+    }
     Remove-Item -LiteralPath $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host '[Frosty] The application directory is already absent. Removed any stale uninstall registration.' -ForegroundColor Yellow
+    Write-Host '[Frosty] The application directory is already absent. Removed any stale shortcuts and uninstall registration.' -ForegroundColor Yellow
     exit 0
 }
 
