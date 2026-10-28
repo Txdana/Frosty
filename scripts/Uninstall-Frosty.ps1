@@ -84,8 +84,9 @@ Remove-Item -LiteralPath $uninstallKey -Recurse -Force -ErrorAction SilentlyCont
 Set-Location -LiteralPath $env:TEMP
 $escapedInstallDir = $installDirFull.Replace("'", "''")
 $deleteCommand = "Start-Sleep -Seconds 2; Remove-Item -LiteralPath '$escapedInstallDir' -Recurse -Force -ErrorAction SilentlyContinue"
+$encodedDeleteCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($deleteCommand))
 $powerShell = Join-Path $PSHOME 'powershell.exe'
-Start-Process -FilePath $powerShell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-Command', $deleteCommand) -WorkingDirectory $env:TEMP -WindowStyle Hidden
+Start-Process -FilePath $powerShell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-EncodedCommand', $encodedDeleteCommand) -WorkingDirectory $env:TEMP -WindowStyle Hidden
 
 Write-Host '[Frosty] Uninstall started. Application files and shortcuts are being removed.' -ForegroundColor Green
 Write-Host '[Frosty] Saved projects, source media, recovery data, the source snapshot, FFmpeg, and build tools were left untouched.' -ForegroundColor Cyan
