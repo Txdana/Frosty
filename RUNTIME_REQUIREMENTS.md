@@ -8,6 +8,8 @@ On a fresh install, Frosty checks for a working FFmpeg executable. If none is fo
 
 For the native release ZIP, extract the archive and double-click `Install-Frosty.cmd` (or run `Install-Frosty.ps1` from PowerShell); this checks FFmpeg, offers the WinGet install, copies Frosty to `%LOCALAPPDATA%\Programs\Frosty`, creates shortcuts, and launches the app. The source-build bootstrap `installer.ps1` offers the same FFmpeg setup when it has checked out the project. The Electron/NSIS package uses its first-install hook and does not re-prompt during upgrades.
 
+To uninstall, use the app's **Uninstall** button, choose Frosty in Windows Settings → Apps → Installed apps, or run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Uninstall-Frosty.ps1"` from PowerShell. The uninstall process removes Frosty's installed files and shortcuts but preserves user projects, media, recovery snapshots, the source snapshot, FFmpeg, and build prerequisites.
+
 ## Manual or custom FFmpeg setup
 
 1. Install an FFmpeg build from a source you trust. The upstream FFmpeg download page lists Windows build providers: https://ffmpeg.org/download.html.
