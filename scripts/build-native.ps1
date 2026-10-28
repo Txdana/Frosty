@@ -16,7 +16,12 @@ foreach ($tool in @('cmake', 'dotnet')) {
 }
 
 Write-Host '[1/4] Configure C++ engine (Visual Studio x64)...' -ForegroundColor Cyan
-cmake -S native -B native/build -A x64
+$cmakeArgs = @('-S', 'native', '-B', 'native/build', '-A', 'x64')
+if (-not [string]::IsNullOrWhiteSpace($env:VCPKG_ROOT)) {
+    $toolchain = Join-Path $env:VCPKG_ROOT 'scripts\buildsystems\vcpkg.cmake'
+    if (Test-Path -LiteralPath $toolchain) { $cmakeArgs += "-DCMAKE_TOOLCHAIN_FILE=$toolchain"; $cmakeArgs += '-DVCPKG_TARGET_TRIPLET=x64-windows' }
+}
+& cmake @cmakeArgs
 if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed. Confirm a C++20 compiler and Boost headers are installed.' }
 
 Write-Host "[2/4] Build native engine ($Configuration)..." -ForegroundColor Cyan
@@ -36,7 +41,7 @@ if (-not (Test-Path $dll)) { throw 'CMake succeeded but frosty_core.dll was not 
 Write-Host '[4/4] Publish WPF workspace...' -ForegroundColor Cyan
 $destination = Join-Path $root $OutputDirectory
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
-dotnet publish windows/Frosty.Desktop/Frosty.Desktop.csproj -c $Configuration -r $Runtime --self-contained false -o $destination
+dotnet publish windows/Frosty.Desktop/Frosty.Desktop.csproj -c $Configuration -r $Runtime --self-contained true -o $destination
 if ($LASTEXITCODE -ne 0) { throw 'WPF publish failed.' }
 Copy-Item -Force $dll (Join-Path $destination 'frosty_core.dll')
 Write-Host "Native Frosty workspace published to: $destination" -ForegroundColor Green
