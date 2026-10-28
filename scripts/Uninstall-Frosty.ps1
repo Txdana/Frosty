@@ -93,7 +93,13 @@ Set-Location -LiteralPath $env:TEMP
 $escapedInstallDir = $installDirFull.Replace("'", "''")
 $deleteCommand = "Start-Sleep -Seconds 2; Remove-Item -LiteralPath '$escapedInstallDir' -Recurse -Force -ErrorAction SilentlyContinue"
 $encodedDeleteCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($deleteCommand))
-$powerShell = Join-Path $PSHOME 'powershell.exe'
+$powerShellCommand = Get-Command 'powershell.exe' -ErrorAction SilentlyContinue
+if ($powerShellCommand) {
+    $powerShell = $powerShellCommand.Source
+} else {
+    $powerShell = Join-Path $PSHOME 'powershell.exe'
+}
+if (-not (Test-Path -LiteralPath $powerShell)) { throw 'Could not find Windows PowerShell to finish removing the application directory.' }
 Start-Process -FilePath $powerShell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-EncodedCommand', $encodedDeleteCommand) -WorkingDirectory $env:TEMP -WindowStyle Hidden
 
 Write-Host '[Frosty] Uninstall started. Application files and shortcuts are being removed.' -ForegroundColor Green
