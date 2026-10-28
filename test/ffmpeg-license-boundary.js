@@ -1,0 +1,14 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+const ffmpegSource = fs.readFileSync(path.join(root, 'lib', 'ffmpeg.js'), 'utf8');
+assert.strictEqual(pkg.license, 'Apache-2.0', 'Frosty package metadata must use Apache-2.0');
+assert.ok(!((pkg.dependencies || {})['ffmpeg-static']), 'ffmpeg-static must not be a runtime dependency');
+assert.ok(!((lock.packages || {})['node_modules/ffmpeg-static']), 'the lockfile must not install ffmpeg-static');
+assert.ok(!/require\\(['"]ffmpeg-static['"]\\)/.test(ffmpegSource), 'the media engine must use external FFmpeg');
+assert.ok(fs.readFileSync(path.join(root, 'LICENSE'), 'utf8').includes('Apache License'), 'full Apache license must be present');
+for (const f of ['NOTICE', 'THIRD_PARTY_NOTICES.md', 'RUNTIME_REQUIREMENTS.md']) assert.ok(fs.existsSync(path.join(root, f)), f + ' must be included');
+console.log('Frosty Apache-2.0 / external FFmpeg license-boundary check passed.');
