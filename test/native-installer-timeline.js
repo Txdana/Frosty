@@ -8,6 +8,8 @@ const pkg = JSON.parse(read('package.json'));
 const installer = read('installer.ps1');
 const ffmpegInstaller = read('scripts/install-ffmpeg.ps1');
 const nativeReleaseInstaller = read('scripts/Install-Frosty.ps1');
+const uninstaller = read('scripts/Uninstall-Frosty.ps1');
+const uninstallLauncher = read('scripts/Uninstall-Frosty.cmd');
 const buildNative = read('scripts/build-native.ps1');
 const packageNative = read('scripts/package-native.ps1');
 const xaml = read('windows/Frosty.Desktop/MainWindow.xaml');
@@ -31,6 +33,18 @@ assert.match(buildNative, /Install-Frosty\.ps1/, 'native release includes a guid
 assert.match(buildNative, /Install-Frosty\.cmd/, 'native release includes a double-click installer launcher');
 assert.match(installer, /dist\\native-windows/i, 'installer expects the native WPF publish directory');
 assert.match(installer, /Frosty\.exe/, 'installer requires and launches the native executable');
+assert.match(buildNative, /Uninstall-Frosty\.ps1/, 'native publish ships the PowerShell uninstaller');
+assert.match(buildNative, /Uninstall-Frosty\.cmd/, 'native publish ships the terminal/click launcher');
+assert.match(buildNative, /FROSTY_VERSION\.txt/, 'native publish carries the display version for Windows registration');
+assert.match(installer, /UninstallString/, 'source installer registers Frosty in Windows Installed Apps');
+assert.match(nativeReleaseInstaller, /UninstallString/, 'ZIP installer registers Frosty in Windows Installed Apps');
+assert.match(nativeReleaseInstaller, /QuietUninstallString/);
+assert.match(uninstaller, /Programs\\Frosty/, 'uninstaller is constrained to the per-user Frosty install directory');
+assert.match(uninstaller, /WaitForProcessId/, 'uninstaller can wait for the in-app process to exit');
+assert.match(uninstaller, /Start Menu\\Programs/);
+assert.match(uninstaller, /Remove-Item -LiteralPath \$uninstallKey/, 'uninstaller removes its own registry registration');
+assert.match(uninstallLauncher, /Uninstall-Frosty\.ps1/);
+assert.doesNotMatch(uninstaller, /Remove-Item[^\n]*Frosty\\(Recovery|source-build)/i, 'uninstaller must not delete recovery data or source snapshot');
 assert.match(installer, /no Electron fallback/i, 'installer does not silently fall back to Electron');
 assert.doesNotMatch(installer, /(^|\n)\s*(electron-builder|npm\s+run\s+dist:win|.*electron:dist)(\s|$)/i, 'installer does not invoke Electron packaging');
 assert.match(buildNative, /Visual Studio 17 2022/, 'native build fixes the supported Windows CMake generator');
@@ -44,6 +58,10 @@ assert.match(pkg.scripts.dist, /package-native\.ps1/, 'normal distribution scrip
 assert.match(pkg.scripts['electron:dist'], /electron-builder/, 'Electron packaging remains a deliberately separate opt-in script');
 
 // Verify a visual Canvas timeline and the critical edit paths are wired, not only described in documentation.
+assert.match(xaml, /Content="Uninstall" Click="UninstallFrosty_Click"/, 'native UI exposes an uninstall control');
+assert.match(windowCs, /private void UninstallFrosty_Click/);
+assert.match(windowCs, /ArgumentList\.Add\("-WaitForProcessId"\)/);
+assert.match(windowCs, /CreateRecoverySnapshot\(\)/);
 assert.match(xaml, /x:Name="TimelineCanvas"/);
 assert.match(xaml, /MouseLeftButtonDown="TimelineCanvas_MouseLeftButtonDown"/);
 assert.match(xaml, /MouseMove="TimelineCanvas_MouseMove"/);
