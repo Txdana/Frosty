@@ -66,6 +66,10 @@ Copy-Item -Force $dll (Join-Path $destination 'frosty_core.dll')
 Copy-Item -Force (Join-Path $PSScriptRoot 'install-ffmpeg.ps1') (Join-Path $destination 'install-ffmpeg.ps1')
 Copy-Item -Force (Join-Path $PSScriptRoot 'Install-Frosty.ps1') (Join-Path $destination 'Install-Frosty.ps1')
 Copy-Item -Force (Join-Path $PSScriptRoot 'Install-Frosty.cmd') (Join-Path $destination 'Install-Frosty.cmd')
+Copy-Item -Force (Join-Path $PSScriptRoot 'Uninstall-Frosty.ps1') (Join-Path $destination 'Uninstall-Frosty.ps1')
+Copy-Item -Force (Join-Path $PSScriptRoot 'Uninstall-Frosty.cmd') (Join-Path $destination 'Uninstall-Frosty.cmd')
+$frostyVersion = (Get-Content (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version
+Set-Content -LiteralPath (Join-Path $destination 'FROSTY_VERSION.txt') -Value $frostyVersion -Encoding ascii
 Write-Host '[Runtime] Checking external FFmpeg runtime (not bundled or relicensed by Frosty)...' -ForegroundColor Cyan
 $ffmpegPath = $null
 if (-not [string]::IsNullOrWhiteSpace($env:FROSTY_FFMPEG) -and (Test-Path $env:FROSTY_FFMPEG)) {
