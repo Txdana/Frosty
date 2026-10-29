@@ -83,6 +83,7 @@ New-ItemProperty -Path $uninstallKey -Name 'NoRepair' -Value 1 -PropertyType DWo
 
 $shell = New-Object -ComObject WScript.Shell
 $shimDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps'
+New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
 $shimPath = Join-Path $shimDir 'frosty.cmd'
 if (Test-Path -LiteralPath $shimDir) {
     $canReplaceShim = -not (Test-Path -LiteralPath $shimPath)
