@@ -1,4 +1,11 @@
 #ifdef _WIN32
+// windows.h defines min/max macros that break std::min/std::max calls in C++.
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
