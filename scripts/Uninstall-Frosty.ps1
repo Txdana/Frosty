@@ -2,7 +2,8 @@
 param(
     [switch]$Quiet,
     [ValidateRange(0, 2147483647)]
-    [int]$WaitForProcessId = 0
+    [int]$WaitForProcessId = 0,
+    [switch]$RemoveManagedPrerequisites
 )
 
 $ErrorActionPreference = 'Stop'
@@ -32,9 +33,9 @@ if (-not (Test-Path -LiteralPath $installDirFull)) {
 if (-not $Quiet) {
     Add-Type -AssemblyName System.Windows.Forms
     $message = @"
-This will remove the Frosty application and its Start Menu/Desktop shortcuts from this Windows account.
+This will remove Frosty's application files, command launcher, shortcuts, and Windows registration.
 
-Saved .frosty projects, original media, recovery data, the source snapshot, FFmpeg, and build prerequisites will be kept. FFmpeg is a separate dependency and is not removed.
+Saved .frosty projects, original media, and recovery snapshots will be kept. WinGet packages recorded as newly installed by Frosty (such as Node.js, CMake, .NET SDK, Python, and FFmpeg) can be removed. Pre-existing tools are not removed. FFmpeg is a separate dependency and is not removed.
 
 Continue with uninstall?
 "@
@@ -87,6 +88,27 @@ foreach ($shortcut in $shortcuts) {
     Remove-Item -LiteralPath $shortcut -Force -ErrorAction SilentlyContinue
 }
 Remove-Item -LiteralPath $uninstallKey -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\frosty.cmd') -Force -ErrorAction SilentlyContinue
+$managedRoot = Join-Path $env:LOCALAPPDATA 'Frosty'
+$manifestPath = Join-Path $managedRoot 'managed-prerequisites.json'
+if (Test-Path -LiteralPath $manifestPath) {
+    try {
+        $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+        foreach ($id in @($manifest.wingetPackages | Where-Object { $_ } | Select-Object -Unique)) {
+            $winget = Get-Command 'winget.exe' -ErrorAction SilentlyContinue
+            if (-not $winget) { $winget = Get-Command 'winget' -ErrorAction SilentlyContinue }
+            if ($winget) {
+                Write-Host "[Frosty] Removing installer-managed prerequisite: $id" -ForegroundColor Yellow
+                & $winget.Source uninstall --id $id --exact --silent --disable-interactivity --accept-source-agreements 2>&1 | Out-Host
+                if ($LASTEXITCODE -ne 0) { Write-Warning "Could not remove $id automatically (exit code $LASTEXITCODE). Uninstall it manually if no longer needed." }
+            } else { Write-Warning "WinGet is unavailable; cannot automatically remove managed prerequisite $id." }
+        }
+    } catch { Write-Warning "Managed prerequisite cleanup had an error: $($_.Exception.Message)" }
+    Remove-Item -LiteralPath $manifestPath -Force -ErrorAction SilentlyContinue
+}
+Remove-Item -LiteralPath (Join-Path $managedRoot 'toolchain') -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $managedRoot 'source-build') -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath (Join-Path $managedRoot 'source-build.zip') -Force -ErrorAction SilentlyContinue
 
 # Move the calling PowerShell session out of the install directory before scheduling deletion.
 Set-Location -LiteralPath $env:TEMP
@@ -104,4 +126,4 @@ if (-not (Test-Path -LiteralPath $powerShell)) { throw 'Could not find Windows P
 Start-Process -FilePath $powerShell -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-EncodedCommand', $encodedDeleteCommand) -WorkingDirectory $env:TEMP -WindowStyle Hidden
 
 Write-Host '[Frosty] Uninstall started. Application files and shortcuts are being removed.' -ForegroundColor Green
-Write-Host '[Frosty] Saved projects, source media, recovery data, the source snapshot, FFmpeg, and build tools were left untouched.' -ForegroundColor Cyan
+Write-Host '[Frosty] Saved projects, source media, and recovery snapshots were preserved. Managed prerequisites and Frosty build artifacts were cleaned up where possible.' -ForegroundColor Cyan
