@@ -15,7 +15,7 @@ if ($env:GITHUB_ACTIONS -ne 'true' -and $env:FROSTY_LIFECYCLE_TEST -ne '1') {
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $package = Join-Path $root $PackageDir
-foreach ($required in @('Frosty.exe', 'frosty_core.dll', 'Install-Frosty.ps1', 'Uninstall-Frosty.ps1', 'install-ffmpeg.ps1', 'LICENSE', 'NOTICE')) {
+foreach ($required in @('Frosty.exe', 'frosty_core.dll', 'Install-Frosty.ps1', 'Uninstall-Frosty.ps1', 'Update-Frosty.ps1', 'frosty.cmd', 'install-ffmpeg.ps1', 'LICENSE', 'NOTICE')) {
     if (-not (Test-Path -LiteralPath (Join-Path $package $required))) { throw "Lifecycle test needs '$required' in $package. Run scripts/build-native.ps1 first." }
 }
 
@@ -45,6 +45,9 @@ try {
         Assert-That (Test-Path -LiteralPath (Join-Path $installDir $file)) "installed file missing: $file"
     }
     Assert-That (-not (Test-Path -LiteralPath (Join-Path $installDir 'ffmpeg.exe'))) 'FFmpeg must not be bundled into the install directory'
+    Assert-That (Test-Path -LiteralPath (Join-Path $installDir 'Update-Frosty.ps1')) 'updater script missing from installation'
+    Assert-That (Test-Path -LiteralPath (Join-Path $installDir 'frosty.cmd')) 'terminal command shim missing from installation'
+    Assert-That (Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\frosty.cmd')) 'PATH command shim missing'
     Assert-That (Test-Path -LiteralPath $startMenuLink) 'Start Menu shortcut missing'
     Assert-That (Test-Path -LiteralPath $uninstallKey) 'Add/Remove Programs entry missing'
     $entry = Get-ItemProperty -LiteralPath $uninstallKey
@@ -64,6 +67,7 @@ try {
     Assert-That (-not (Test-Path -LiteralPath $startMenuLink)) 'Start Menu shortcut still exists after uninstall'
     Assert-That (-not (Test-Path -LiteralPath $desktopLink)) 'Desktop shortcut still exists after uninstall'
     Assert-That (-not (Test-Path -LiteralPath $uninstallKey)) 'Add/Remove Programs entry still exists after uninstall'
+    Assert-That (-not (Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\frosty.cmd'))) 'PATH command shim still exists after uninstall'
 
     Write-Host '[Lifecycle 4/5] Uninstall when already removed (must succeed and stay clean)...' -ForegroundColor Cyan
     $uninstaller = Join-Path $package 'Uninstall-Frosty.ps1'
