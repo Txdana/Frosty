@@ -7,6 +7,7 @@ root=Path(__file__).resolve().parents[1]
 xaml=(root/'windows/Frosty.Desktop/MainWindow.xaml').read_text(encoding='utf-8')
 cs=(root/'windows/Frosty.Desktop/MainWindow.xaml.cs').read_text(encoding='utf-8')
 workflow=(root/'windows/Frosty.Desktop/NativeWorkflow.cs').read_text(encoding='utf-8')
+media_paths=(root/'windows/Frosty.Desktop/MediaToolPaths.cs').read_text(encoding='utf-8')
 header=(root/'native/include/frosty/c_api.h').read_text(encoding='utf-8')
 ET.fromstring(xaml)
 events=set(re.findall(r'(?<![A-Za-z0-9_])(?:Click|SelectionChanged|MouseDoubleClick|MouseLeftButtonDown|MouseLeftButtonUp|MouseMove|PreviewKeyDown|MediaOpened|MediaFailed|TextChanged|LostFocus|Checked|Unchecked|SizeChanged)="([A-Za-z0-9_]+)"',xaml))
@@ -24,5 +25,7 @@ for feature in ('NormalizeAiOperations', 'set_transition', 'set_keyframe', 'set_
     assert feature in cs or feature in workflow, f'Missing native planner/timeline operation: {feature}'
 assert 'SplitClip' in (root/'native/include/frosty/core.hpp').read_text(encoding='utf-8')
 assert 'op=="split"' in (root/'native/src/c_api.cpp').read_text(encoding='utf-8')
+assert 'Environment.CurrentDirectory' not in media_paths, 'media tool resolution must not execute binaries from an arbitrary working directory'
+assert 'FROSTY_FFMPEG' in media_paths and 'AppContext.BaseDirectory' in media_paths, 'media tools resolve from explicit override or trusted app directory'
 print(f'WPF static integration checks passed: {len(events)} XAML event handlers, native ABI declarations, visual timeline/edit operations, render/audio/effects/AI workflows, balanced braces.')
 print('NOTE: static checks do not prove C# compilation or Windows runtime behavior.')
