@@ -24,8 +24,6 @@ internal static class MediaToolPaths
         {
             Path.Combine(AppContext.BaseDirectory, exe),
             Path.Combine(AppContext.BaseDirectory, "tools", exe),
-            Path.Combine(Environment.CurrentDirectory, exe),
-            Path.Combine(Environment.CurrentDirectory, "tools", exe),
         };
         if (OperatingSystem.IsWindows())
         {
