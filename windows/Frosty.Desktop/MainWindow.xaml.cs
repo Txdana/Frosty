@@ -1185,6 +1185,9 @@ public partial class MainWindow : Window
             MessageBoxImage.Warning,
             MessageBoxResult.No);
         if (confirmation != MessageBoxResult.Yes) return;
+        var removeUntrackedPrerequisites = MessageBox.Show(this,
+            "Some tools installed during older Frosty testing may not have an ownership record. Remove common WinGet packages for Node.js, CMake, .NET SDK, Python, Visual Studio Build Tools and FFmpeg if found? This can affect other apps that use them.",
+            "Remove leftover test tools?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.Yes) == MessageBoxResult.Yes;
 
         var uninstallScript = System.IO.Path.Combine(AppContext.BaseDirectory, "Uninstall-Frosty.ps1");
         if (!System.IO.File.Exists(uninstallScript))
@@ -1223,6 +1226,7 @@ public partial class MainWindow : Window
             startInfo.ArgumentList.Add("-File");
             startInfo.ArgumentList.Add(uninstallScript);
             startInfo.ArgumentList.Add("-Quiet");
+            if (removeUntrackedPrerequisites) startInfo.ArgumentList.Add("-RemoveUntrackedPrerequisites");
             startInfo.ArgumentList.Add("-WaitForProcessId");
             startInfo.ArgumentList.Add(Environment.ProcessId.ToString(CultureInfo.InvariantCulture));
             _ = Process.Start(startInfo) ?? throw new InvalidOperationException("Windows did not start the uninstaller.");
