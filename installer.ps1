@@ -327,7 +327,14 @@ try {
     if (-not (Test-Command 'cmake')) { throw 'CMake is missing after installation. Open a new terminal and rerun.' }
     $cmakeVersionText = (& cmake --version | Select-Object -First 1) -replace '^cmake version ', ''
     try { $cmakeVersion = [version]$cmakeVersionText } catch { throw "Could not parse the installed CMake version '$cmakeVersionText'. Update CMake and rerun." }
-    if ($cmakeVersion -lt [version]'3.20') { Invoke-WinGetInstall 'Kitware.CMake' }
+    if ($cmakeVersion -lt [version]'3.20') {
+        Invoke-WinGetInstall 'Kitware.CMake'
+        Refresh-ProcessPath
+        if (-not (Test-Command 'cmake')) { throw 'CMake is missing after the update. Open a new terminal and rerun.' }
+        $cmakeVersionText = (& cmake --version | Select-Object -First 1) -replace '^cmake version ', ''
+        try { $cmakeVersion = [version]$cmakeVersionText } catch { throw "Could not parse the updated CMake version '$cmakeVersionText'. Update CMake and rerun." }
+        if ($cmakeVersion -lt [version]'3.20') { throw "CMake $cmakeVersion is still installed after the update; Frosty requires CMake 3.20 or newer. Remove older CMake entries from PATH and rerun." }
+    }
     if (-not (Test-Command 'cmake')) { throw 'CMake is missing after installation. Open a new terminal and rerun.' }
 
     if (-not (Test-DotNet8Sdk)) { Invoke-WinGetInstall 'Microsoft.DotNet.SDK.8' }
