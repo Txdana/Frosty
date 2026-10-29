@@ -30,8 +30,8 @@ assert.match(installer, /Frosty\.installing-/, 'installer stages the new app bef
 assert.match(installer, /Frosty\.backup-/, 'installer keeps a rollback copy during replacement');
 assert.match(installer, /Staged build is incomplete; the existing Frosty installation has been left untouched/, 'installer validates staged files before replacing the current app');
 assert.doesNotMatch(installer, /if \(Test-Path -LiteralPath \$installDir\) \{ Remove-Item -LiteralPath \$installDir -Recurse -Force \}/, 'installer must not delete the current app before a replacement is ready');
-assert.match(installer, /Join-Path \$src 'native\\\\build'/, 'source snapshot excludes the native build output');
-assert.match(installer, /Join-Path \$src 'native\\\\build-p2'/, 'source snapshot excludes the test build output');
+assert.match(installer, /Join-Path \$src 'native\\build'/, 'source snapshot excludes the native build output');
+assert.match(installer, /Join-Path \$src 'native\\build-p2'/, 'source snapshot excludes the test build output');
 assert.match(nativeReleaseInstaller, /if \(\[System\.IO\.Path\]::GetFullPath\(\$_.Path\) -ieq \$installedExe\)/, 'ZIP installer only stops the Frosty process from the installation being updated');
 assert.match(installer, /function Test-WinGetPackageInstalled/, 'installer detects an already installed Build Tools package');
 assert.match(installer, /Test-WinGetPackageInstalled 'Microsoft\.VisualStudio\.2022\.BuildTools'/, 'installer avoids blindly upgrading an already installed but undiscoverable Build Tools instance');
