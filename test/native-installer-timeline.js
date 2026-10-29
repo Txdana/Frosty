@@ -34,6 +34,8 @@ assert.match(commandShim, /Update-Frosty\.ps1/, 'terminal command delegates to u
 assert.match(buildNative, /Update-Frosty\.ps1/, 'native distribution includes updater');
 assert.match(installer, /Add-ManagedPackage/, 'source installer records newly installed WinGet prerequisites');
 assert.match(uninstaller, /managed-prerequisites\.json/, 'uninstaller reads managed prerequisite ownership');
+assert.match(uninstaller, /Remove-ManagedFrostyArtifacts/, 'uninstaller also cleans managed prerequisites when app files are already absent');
+assert.match(windowCs, /_allowCloseForUpdate = true/, 'updater can close without triggering a second unsaved-changes prompt');
 assert.match(uninstaller, /winget\.Source uninstall/, 'uninstaller removes only recorded managed WinGet prerequisites');
 assert.match(xaml, /Content="Check for updates" Click="UpdateFrosty_Click"/, 'native GUI exposes update control');
 assert.match(windowCs, /private void UpdateFrosty_Click/, 'native GUI update control is implemented');
