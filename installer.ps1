@@ -70,29 +70,121 @@ function Test-Python3 {
 }
 
 function Get-VsWherePath {
-    return (Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe')
+    $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+    $candidates = @()
+    if (-not [string]::IsNullOrWhiteSpace($programFilesX86)) {
+        $candidates += Join-Path $programFilesX86 'Microsoft Visual Studio\Installer\vswhere.exe'
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+        $candidates += Join-Path $env:ProgramFiles 'Microsoft Visual Studio\Installer\vswhere.exe'
+    }
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) { return $candidate }
+    }
+    return $null
+}
+
+function Get-VisualStudioInstallPaths {
+    $paths = [System.Collections.Generic.List[string]]::new()
+    $seen = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $vswhere = Get-VsWherePath
+    if ($vswhere) {
+        $found = & $vswhere -all -products '*' -property installationPath 2>$null
+        foreach ($entry in @($found)) {
+            if (-not [string]::IsNullOrWhiteSpace([string]$entry)) {
+                $candidate = ([string]$entry).Trim()
+                if ((Test-Path -LiteralPath $candidate) -and $seen.Add($candidate)) { $paths.Add($candidate) }
+            }
+        }
+    }
+
+    # vswhere can be absent or fail to enumerate an incomplete Build Tools install.
+    # Visual Studio Setup's instance registry is another supported source of install paths.
+    $instanceRoots = @(
+        'HKLM:\SOFTWARE\Microsoft\VisualStudio\Setup\Instances',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\Setup\Instances'
+    )
+    foreach ($root in $instanceRoots) {
+        if (-not (Test-Path -LiteralPath $root)) { continue }
+        foreach ($key in (Get-ChildItem -LiteralPath $root -ErrorAction SilentlyContinue)) {
+            $instance = Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction SilentlyContinue
+            $candidate = [string]$instance.installationPath
+            if (-not [string]::IsNullOrWhiteSpace($candidate) -and
+                (Test-Path -LiteralPath $candidate) -and $seen.Add($candidate)) {
+                $paths.Add($candidate)
+            }
+        }
+    }
+
+    $defaultBuildTools = $null
+    $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+    if (-not [string]::IsNullOrWhiteSpace($programFilesX86)) {
+        $defaultBuildTools = Join-Path $programFilesX86 'Microsoft Visual Studio\2022\BuildTools'
+    }
+    if ($defaultBuildTools -and (Test-Path -LiteralPath $defaultBuildTools) -and $seen.Add($defaultBuildTools)) {
+        $paths.Insert(0, $defaultBuildTools)
+    }
+    return @($paths)
+}
+
+function Test-WinGetPackageInstalled([string]$Id) {
+    $winget = Get-WinGetPath
+    if (-not $winget) { return $false }
+    try {
+        $output = (& $winget list --id $Id --exact --disable-interactivity 2>&1 | Out-String)
+        foreach ($line in ($output -split '\r?\n')) {
+            if ($line -match [regex]::Escape($Id) -and $line -notmatch 'No installed package found') { return $true }
+        }
+    } catch { }
+    return $false
 }
 
 function Ensure-VisualCppToolchain {
     $vswhere = Get-VsWherePath
     $validInstall = $null
-    if (Test-Path -LiteralPath $vswhere) {
-        $matches = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+    if ($vswhere) {
+        $matches = & $vswhere -all -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
         if ($matches) { $validInstall = ($matches | Select-Object -First 1).Trim() }
     }
-    if ($validInstall) { Write-Host "Visual Studio C++ toolchain found: $validInstall" -ForegroundColor Green; return }
-
-    $existing = $null
-    if (Test-Path -LiteralPath $vswhere) {
-        $matches = & $vswhere -latest -products '*' -property installationPath 2>$null
-        if ($matches) { $existing = ($matches | Select-Object -First 1).Trim() }
+    if ($validInstall -and (Test-Path -LiteralPath $validInstall)) {
+        Write-Host "Visual Studio C++ toolchain found: $validInstall" -ForegroundColor Green
+        return
     }
+
+    $instances = @(Get-VisualStudioInstallPaths)
+    $existing = $null
+    if ($instances.Count -gt 0) {
+        # Prefer Build Tools over a full Visual Studio IDE instance when both are installed.
+        $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+        $buildToolsDefault = if ($programFilesX86) { Join-Path $programFilesX86 'Microsoft Visual Studio\2022\BuildTools' } else { $null }
+        if ($buildToolsDefault -and $instances -contains $buildToolsDefault) {
+            $existing = $buildToolsDefault
+        } else {
+            $existing = $instances | Select-Object -First 1
+        }
+    }
+
+    $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+    $setupCandidates = @()
+    if ($programFilesX86) { $setupCandidates += Join-Path $programFilesX86 'Microsoft Visual Studio\Installer\setup.exe' }
+    if ($env:ProgramFiles) { $setupCandidates += Join-Path $env:ProgramFiles 'Microsoft Visual Studio\Installer\setup.exe' }
+    $setup = $setupCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+
     if ($existing) {
-        $setup = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\setup.exe'
-        if (-not (Test-Path -LiteralPath $setup)) { throw 'Visual Studio is installed but the Visual Studio Installer setup.exe was not found. Repair Visual Studio Build Tools and rerun.' }
-        Write-Step 'Adding the required C++ workload and Windows SDK to Visual Studio'
-        & $setup modify --installPath $existing --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --quiet --wait --norestart
-        if ($LASTEXITCODE -ne 0) { throw 'Visual Studio could not add the C++ workload. Rerun PowerShell, allow any UAC prompt, and try again.' }
+        if (-not $setup) {
+            throw "Visual Studio is installed at '$existing', but the Visual Studio Installer setup.exe was not found. Open Visual Studio Installer, repair Build Tools 2022, and select Desktop development with C++."
+        }
+        Write-Step "Adding the required C++ workload and Windows SDK to the existing Visual Studio instance: $existing"
+        & $setup modify --installPath $existing --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --wait --norestart
+        $setupExitCode = $LASTEXITCODE
+        if ($setupExitCode -notin @(0, 3010)) {
+            throw "Visual Studio Installer could not add the C++ workload (exit code $setupExitCode). Open Visual Studio Installer, choose Build Tools 2022 > Modify, select Desktop development with C++, and finish the installation. Then rerun this Frosty installer."
+        }
+        if ($setupExitCode -eq 3010) {
+            Write-Note 'Visual Studio setup requested a restart. Continuing verification; reboot Windows before building if MSVC remains unavailable.'
+        }
+    } elseif (Test-WinGetPackageInstalled 'Microsoft.VisualStudio.2022.BuildTools') {
+        throw "WinGet reports Visual Studio Build Tools 2022 is already installed, but vswhere and the Visual Studio Setup registry did not expose a usable instance. Frosty will not try to upgrade it blindly. Open Visual Studio Installer, choose Build Tools 2022 > Modify (or Repair), select Desktop development with C++ including MSVC x64/x86 tools and a Windows 10/11 SDK, finish setup, then rerun this installer."
     } else {
         $override = '--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended'
         Invoke-WinGetInstall 'Microsoft.VisualStudio.2022.BuildTools' @('--override', $override)
@@ -100,9 +192,14 @@ function Ensure-VisualCppToolchain {
 
     Refresh-ProcessPath
     $vswhere = Get-VsWherePath
-    if (-not (Test-Path -LiteralPath $vswhere)) { throw 'Visual Studio Build Tools installation did not create vswhere.exe. Open Visual Studio Installer, finish installation, and rerun.' }
-    $valid = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
-    if (-not $valid) { throw 'The MSVC C++ toolchain was not detected after installation. Open Visual Studio Installer and ensure Desktop development with C++ is installed.' }
+    if (-not $vswhere) {
+        throw 'Visual Studio setup completed but vswhere.exe is still missing. Open Visual Studio Installer, finish or repair Build Tools 2022, ensure Desktop development with C++ is installed, then rerun Frosty setup.'
+    }
+    $valid = & $vswhere -all -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+    if (-not $valid) {
+        throw 'The MSVC C++ toolchain was not detected after Visual Studio setup. In Visual Studio Installer, modify Build Tools 2022 and select Desktop development with C++, including MSVC x64/x86 build tools and a Windows 10/11 SDK.'
+    }
+    Write-Host "Visual Studio C++ toolchain ready: $(($valid | Select-Object -First 1).Trim())" -ForegroundColor Green
 }
 
 function Ensure-BoostHeaders {
