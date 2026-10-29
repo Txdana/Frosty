@@ -29,7 +29,7 @@ assert.match(installer, /Test-WinGetPackageInstalled 'Microsoft\.VisualStudio\.2
 assert.match(installer, /Start-Process -FilePath \$setup -ArgumentList \$setupArguments -Verb RunAs -Wait -PassThru/, 'installer elevates the existing Visual Studio setup operation through UAC');
 assert.match(installer, /'--installPath', \('\"' \+ \$existing \+ '\"'\)/, 'installer quotes Visual Studio install paths when passing command-line arguments');
 assert.match(installer, /--passive[\s\S]*--norestart/, 'existing Visual Studio workload setup uses passive mode and prevents automatic restart');
-assert.match(installer, /NativeErrorCode -eq 1223/, 'installer reports when the user declines the Visual Studio UAC prompt');
+assert.match(installer, /nativeErrorCode\.Value -eq 1223/, 'installer reports when the user declines the Visual Studio UAC prompt');
 assert.doesNotMatch(installer, /^\s*& \$setup modify/m, 'installer does not launch passive Visual Studio setup without elevation');
 assert.doesNotMatch(installer, /& \$setup modify[^\n]*--wait/, 'installed setup.exe must not receive --wait, which is bootstrapper-only');
 assert.match(installer, /Desktop development with C\+\+/, 'Visual Studio failure message gives the manual C++ workload recovery path');
