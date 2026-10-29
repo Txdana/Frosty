@@ -34,8 +34,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "The installed FFmpeg executable failed its version check." }
       - name: Install JavaScript dependencies
         run: npm ci
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
       - name: Run complete portable suite, native CTest, WPF/GPU source audits and Windows WPF smoke test
         run: npm test
+      - name: Build legacy Electron NSIS compatibility installer
+        run: npm run electron:dist:win
       - name: Upload published native WPF smoke-test build
         if: always() && hashFiles('dist/native-windows-e2e/Frosty.exe') != ''
         uses: actions/upload-artifact@v4
