@@ -2,7 +2,8 @@
 param(
     [switch]$Quiet,
     [ValidateRange(0, 2147483647)]
-    [int]$WaitForProcessId = 0
+    [int]$WaitForProcessId = 0,
+    [switch]$RemoveUntrackedPrerequisites
 )
 $ErrorActionPreference = 'Stop'
 $installDir = Join-Path $env:LOCALAPPDATA 'Programs\Frosty'
@@ -11,6 +12,11 @@ $programsRoot = [System.IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Prog
 if ([System.IO.Path]::GetDirectoryName($installDirFull) -ine $programsRoot -or [System.IO.Path]::GetFileName($installDirFull) -ine 'Frosty') { throw "Refusing to uninstall from an unexpected path: $installDirFull" }
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Frosty'
 function Remove-ManagedFrostyArtifacts {
+    if (-not $Quiet -and -not $RemoveUntrackedPrerequisites) {
+        Add-Type -AssemblyName System.Windows.Forms
+        $answer = [System.Windows.Forms.MessageBox]::Show('Some tools installed during older Frosty testing may not have an ownership record. Remove common WinGet prerequisites (Node.js, CMake, .NET SDK, Python, Visual Studio Build Tools, FFmpeg) if present? This may affect other applications that use them.', 'Remove untracked developer tools?', [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Warning, [System.Windows.Forms.MessageBoxDefaultButton]::Button2)
+        if ($answer -eq [System.Windows.Forms.DialogResult]::Yes) { $script:RemoveUntrackedPrerequisites = $true }
+    }
     $shimPath = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\frosty.cmd'
     if (Test-Path -LiteralPath $shimPath) {
         $isFrostyShim = $false
@@ -20,10 +26,12 @@ function Remove-ManagedFrostyArtifacts {
     }
     $managedRoot = Join-Path $env:LOCALAPPDATA 'Frosty'
     $manifestPath = Join-Path $managedRoot 'managed-prerequisites.json'
+    $ownedIds = @()
     if (Test-Path -LiteralPath $manifestPath) {
         try {
             $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-            foreach ($id in @($manifest.wingetPackages | Where-Object { $_ } | Select-Object -Unique)) {
+            $ownedIds = @($manifest.wingetPackages | Where-Object { $_ } | Select-Object -Unique)
+            foreach ($id in $ownedIds) {
                 $winget = Get-Command 'winget.exe' -ErrorAction SilentlyContinue
                 if (-not $winget) { $winget = Get-Command 'winget' -ErrorAction SilentlyContinue }
                 if ($winget) {
@@ -34,6 +42,20 @@ function Remove-ManagedFrostyArtifacts {
             }
         } catch { Write-Warning "Managed prerequisite cleanup had an error: $($_.Exception.Message)" }
         Remove-Item -LiteralPath $manifestPath -Force -ErrorAction SilentlyContinue
+    }
+    if ($RemoveUntrackedPrerequisites -or $script:RemoveUntrackedPrerequisites) {
+        $winget = Get-Command 'winget.exe' -ErrorAction SilentlyContinue
+        if (-not $winget) { $winget = Get-Command 'winget' -ErrorAction SilentlyContinue }
+        $knownIds = @('OpenJS.NodeJS.LTS','Kitware.CMake','Microsoft.DotNet.SDK.8','Python.Python.3.13','Microsoft.VisualStudio.2022.BuildTools','Gyan.FFmpeg')
+        foreach ($id in $knownIds | Where-Object { $_ -notin $ownedIds }) {
+            if (-not $winget) { Write-Warning "WinGet is unavailable; cannot check untracked prerequisite $id."; continue }
+            $listed = (& $winget.Source list --id $id --exact --disable-interactivity 2>&1 | Out-String)
+            if ($listed -match [regex]::Escape($id) -and $listed -notmatch 'No installed package found') {
+                Write-Host "[Frosty] Removing untracked prerequisite at user request: $id" -ForegroundColor Yellow
+                & $winget.Source uninstall --id $id --exact --silent --disable-interactivity --accept-source-agreements 2>&1 | Out-Host
+                if ($LASTEXITCODE -ne 0) { Write-Warning "Could not remove $id automatically (exit code $LASTEXITCODE). Uninstall it manually if no longer needed." }
+            }
+        }
     }
     Remove-Item -LiteralPath (Join-Path $managedRoot 'toolchain') -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $managedRoot 'source-build') -Recurse -Force -ErrorAction SilentlyContinue
