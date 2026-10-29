@@ -9,6 +9,7 @@ $powerShellScripts = @(
     'installer.ps1',
     'scripts/Install-Frosty.ps1',
     'scripts/Uninstall-Frosty.ps1',
+    'scripts/Update-Frosty.ps1',
     'scripts/install-ffmpeg.ps1',
     'scripts/build-native.ps1',
     'scripts/package-native.ps1',
