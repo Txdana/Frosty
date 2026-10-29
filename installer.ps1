@@ -149,6 +149,42 @@ function Test-WinGetPackageInstalled([string]$Id) {
     return $false
 }
 
+function Assert-VisualStudioDiskSpace([string]$InstallPath) {
+    # Visual Studio downloads and expands packages into both its install volume and
+    # the system/user package caches. Check both before launching the multi-GB setup.
+    $pathsToCheck = @($InstallPath, $env:TEMP, $env:LOCALAPPDATA, $env:ProgramData) |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    $roots = @($pathsToCheck | ForEach-Object {
+        try { [System.IO.Path]::GetPathRoot([System.IO.Path]::GetFullPath($_)) } catch { $null }
+    } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+
+    $minimumFreeBytes = 15GB
+    $lowSpace = @()
+    foreach ($root in $roots) {
+        try {
+            $drive = [System.IO.DriveInfo]::new($root)
+            if ($drive.IsReady -and $drive.AvailableFreeSpace -lt $minimumFreeBytes) {
+                $freeGB = [math]::Round($drive.AvailableFreeSpace / 1GB, 1)
+                $lowSpace += "$root has only $freeGB GB free"
+            }
+        } catch { }
+    }
+
+    if ($lowSpace.Count -gt 0) {
+        $details = $lowSpace -join '; '
+        throw "Not enough disk space to add the Visual Studio C++ workload ($details). Free at least 15 GB on the Visual Studio install, Windows/package-cache, and TEMP volumes; 25 GB or more is recommended. Then rerun the Frosty installer. No files were automatically deleted."
+    }
+
+    foreach ($root in $roots) {
+        try {
+            $drive = [System.IO.DriveInfo]::new($root)
+            if ($drive.IsReady -and $drive.AvailableFreeSpace -lt 25GB) {
+                Write-Note "Only $([math]::Round($drive.AvailableFreeSpace / 1GB, 1)) GB is free on $root. Visual Studio setup may need more space; 25 GB or more is recommended."
+            }
+        } catch { }
+    }
+}
+
 function Ensure-VisualCppToolchain {
     $vswhere = Get-VsWherePath
     $validInstall = $null
@@ -184,6 +220,7 @@ function Ensure-VisualCppToolchain {
         if (-not $setup) {
             throw "Visual Studio is installed at '$existing', but the Visual Studio Installer setup.exe was not found. Open Visual Studio Installer, repair Build Tools 2022, and select Desktop development with C++."
         }
+        Assert-VisualStudioDiskSpace -InstallPath $existing
         Write-Step "Requesting administrator permission to add the C++ workload and Windows SDK to: $existing"
         Write-Host 'Windows may show a User Account Control prompt for Visual Studio Installer. Approve it to continue.' -ForegroundColor Yellow
         # Visual Studio setup.exe rejects --passive unless it was launched elevated.
@@ -207,6 +244,9 @@ function Ensure-VisualCppToolchain {
             throw "Could not launch Visual Studio Installer with administrator permission: $($_.Exception.Message). Open Visual Studio Installer manually, add Desktop development with C++, and rerun Frosty setup."
         }
         if ($setupExitCode -notin @(0, 3010)) {
+            if ($setupExitCode -eq -2147024784 -or $setupExitCode -eq 0x80070070) {
+                throw "Visual Studio Installer could not add the C++ workload because Windows reported insufficient disk space (exit code $setupExitCode / 0x80070070). Free at least 15 GB on the Visual Studio install, Windows/package-cache, and TEMP volumes; 25 GB or more is recommended. Check Settings > System > Storage and rerun this Frosty installer."
+            }
             throw "Visual Studio Installer could not add the C++ workload (exit code $setupExitCode). Open Visual Studio Installer, choose Build Tools 2022 > Modify, select Desktop development with C++, and finish the installation. Then rerun this Frosty installer."
         }
         if ($setupExitCode -eq 3010) {
