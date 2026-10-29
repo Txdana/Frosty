@@ -19,9 +19,17 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host 'Frosty uses FFmpeg as a separately installed command-line dependency. WinGet declares Gyan.FFmpeg as GPL-3.0; Frosty remains Apache-2.0 and does not bundle that binary.' -ForegroundColor Yellow
     $answer = Read-Host 'Install Gyan.FFmpeg through WinGet now? [Y/n]'
     if ($answer -notmatch '^(n|no)$') {
+        $ffmpegWasInstalled = $false
+        try { $ffmpegWasInstalled = [bool]((& winget.exe list --id Gyan.FFmpeg --exact --disable-interactivity 2>$null | Out-String) -match 'Gyan.FFmpeg') } catch { }
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ffmpegHelper -InstallIfMissing
         if ($LASTEXITCODE -ne 0) {
             Write-Host 'FFmpeg setup failed. Frosty will still be installed, but media features may be unavailable.' -ForegroundColor Yellow
+        } elseif (-not $ffmpegWasInstalled) {
+            $managedRoot = Join-Path $env:LOCALAPPDATA 'Frosty'; New-Item -ItemType Directory -Force -Path $managedRoot | Out-Null
+            $manifestPath = Join-Path $managedRoot 'managed-prerequisites.json'
+            $manifest = if (Test-Path -LiteralPath $manifestPath) { try { Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json } catch { [pscustomobject]@{ wingetPackages=@() } } } else { [pscustomobject]@{ wingetPackages=@() } }
+            $ids = @(@($manifest.wingetPackages | Where-Object { $_ }) + 'Gyan.FFmpeg' | Select-Object -Unique)
+            Set-Content -LiteralPath $manifestPath -Value (@{ wingetPackages=$ids } | ConvertTo-Json -Depth 4) -Encoding utf8
         }
     } else {
         Write-Host 'Skipping FFmpeg. Install it later and put it on PATH before using media operations.' -ForegroundColor Yellow
@@ -74,6 +82,8 @@ New-ItemProperty -Path $uninstallKey -Name 'NoModify' -Value 1 -PropertyType DWo
 New-ItemProperty -Path $uninstallKey -Name 'NoRepair' -Value 1 -PropertyType DWord -Force | Out-Null
 
 $shell = New-Object -ComObject WScript.Shell
+$shimDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps'
+if (Test-Path -LiteralPath $shimDir) { Copy-Item -LiteralPath (Join-Path $installDir 'frosty.cmd') -Destination (Join-Path $shimDir 'frosty.cmd') -Force }
 $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
 New-Item -ItemType Directory -Force -Path $startMenu | Out-Null
 $links = @((Join-Path $startMenu 'Frosty.lnk'), (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Frosty.lnk'))
