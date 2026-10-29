@@ -27,5 +27,6 @@ assert 'SplitClip' in (root/'native/include/frosty/core.hpp').read_text(encoding
 assert 'op=="split"' in (root/'native/src/c_api.cpp').read_text(encoding='utf-8')
 assert 'Environment.CurrentDirectory' not in media_paths, 'media tool resolution must not execute binaries from an arbitrary working directory'
 assert 'FROSTY_FFMPEG' in media_paths and 'AppContext.BaseDirectory' in media_paths, 'media tools resolve from explicit override or trusted app directory'
+assert '?? throw new FileNotFoundException' in media_paths, 'missing media tools fail clearly instead of falling back to a bare executable name searched from the current directory'
 print(f'WPF static integration checks passed: {len(events)} XAML event handlers, native ABI declarations, visual timeline/edit operations, render/audio/effects/AI workflows, balanced braces.')
 print('NOTE: static checks do not prove C# compilation or Windows runtime behavior.')
