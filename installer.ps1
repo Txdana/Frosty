@@ -190,7 +190,8 @@ function Ensure-VisualCppToolchain {
             $setupProcess = Start-Process -FilePath $setup -ArgumentList $setupArguments -Verb RunAs -Wait -PassThru -ErrorAction Stop
             $setupExitCode = $setupProcess.ExitCode
         } catch {
-            if ($_.Exception.NativeErrorCode -eq 1223) {
+            $nativeErrorCode = $_.Exception.PSObject.Properties['NativeErrorCode']
+            if ($nativeErrorCode -and $nativeErrorCode.Value -eq 1223) {
                 throw 'Windows administrator permission was declined. Rerun Frosty setup and approve the Visual Studio Installer UAC prompt, or open Visual Studio Installer manually and add Desktop development with C++.'
             }
             throw "Could not launch Visual Studio Installer with administrator permission: $($_.Exception.Message). Open Visual Studio Installer manually, add Desktop development with C++, and rerun Frosty setup."
