@@ -29,8 +29,8 @@
     "test:semantic-search": "node test/scene-index.js && node test/embedding-client.js"
   },
   "devDependencies": {
-    "electron": "^33.0.0",
-    "electron-builder": "^25.0.0"
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
   },
   "build": {
     "appId": "app.frosty.editor",
