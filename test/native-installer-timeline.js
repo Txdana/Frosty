@@ -26,7 +26,11 @@ assert.match(installer, /scripts[\\/]build-native\.ps1/i, 'installer invokes the
 assert.match(installer, /function Get-VisualStudioInstallPaths/, 'installer discovers existing Visual Studio instances via vswhere and setup registry');
 assert.match(installer, /function Test-WinGetPackageInstalled/, 'installer detects an already installed Build Tools package');
 assert.match(installer, /Test-WinGetPackageInstalled 'Microsoft\.VisualStudio\.2022\.BuildTools'/, 'installer avoids blindly upgrading an already installed but undiscoverable Build Tools instance');
-assert.match(installer, /setup modify --installPath \$existing[^\n]*--passive --norestart/, 'installer modifies the existing Visual Studio instance through setup.exe');
+assert.match(installer, /Start-Process -FilePath \$setup -ArgumentList \$setupArguments -Verb RunAs -Wait -PassThru/, 'installer elevates the existing Visual Studio setup operation through UAC');
+assert.match(installer, /'--installPath', \('\"' \+ \$existing \+ '\"'\)/, 'installer quotes Visual Studio install paths when passing command-line arguments');
+assert.match(installer, /--passive[\s\S]*--norestart/, 'existing Visual Studio workload setup uses passive mode and prevents automatic restart');
+assert.match(installer, /NativeErrorCode -eq 1223/, 'installer reports when the user declines the Visual Studio UAC prompt');
+assert.doesNotMatch(installer, /^\s*& \$setup modify/m, 'installer does not launch passive Visual Studio setup without elevation');
 assert.doesNotMatch(installer, /& \$setup modify[^\n]*--wait/, 'installed setup.exe must not receive --wait, which is bootstrapper-only');
 assert.match(installer, /Desktop development with C\+\+/, 'Visual Studio failure message gives the manual C++ workload recovery path');
 assert.match(installer, /Microsoft\.VisualStudio\.Component\.VC\.Tools\.x86\.x64/, 'installer verifies the MSVC C++ component after setup');
