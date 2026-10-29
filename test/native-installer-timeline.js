@@ -37,7 +37,9 @@ assert.match(installer, /Add-ManagedPackage/, 'source installer records newly in
 assert.match(uninstaller, /managed-prerequisites\.json/, 'uninstaller reads managed prerequisite ownership');
 assert.match(uninstaller, /Remove-ManagedFrostyArtifacts/, 'uninstaller also cleans managed prerequisites when app files are already absent');
 assert.match(windowCs, /_allowCloseForUpdate = true/, 'updater can close without triggering a second unsaved-changes prompt');
-assert.match(uninstaller, /winget\.Source uninstall/, 'uninstaller removes only recorded managed WinGet prerequisites');
+assert.match(uninstaller, /winget\.Source uninstall/, 'uninstaller removes recorded managed WinGet prerequisites');
+assert.match(uninstaller, /RemoveUntrackedPrerequisites/, 'uninstaller offers explicit cleanup for legacy test prerequisites without ownership records');
+assert.match(windowCs, /Remove leftover test tools\?/, 'GUI asks before removing legacy untracked developer prerequisites');
 assert.match(xaml, /Content="Update to latest" Click="UpdateFrosty_Click"/, 'native GUI exposes update control');
 assert.match(windowCs, /private void UpdateFrosty_Click/, 'native GUI update control is implemented');
 assert.match(installer, /Write-Step \"Installer revision: \$script:FrostyInstallerRevision\"/, 'installer logs the exact revision before starting prerequisite work');
