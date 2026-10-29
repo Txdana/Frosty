@@ -14,6 +14,8 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Set-StrictMode -Version Latest
 
+$script:FrostyInstallerRevision = 'audit-2026-10-29-1'
+
 function Write-Step([string]$Message) { Write-Host "`n[Frosty] $Message" -ForegroundColor Cyan }
 function Write-Note([string]$Message) { Write-Host "[Frosty] $Message" -ForegroundColor Yellow }
 function Test-Command([string]$Name) { return [bool](Get-Command $Name -ErrorAction SilentlyContinue) }
@@ -294,6 +296,7 @@ $sourceSnapshot = Join-Path $env:LOCALAPPDATA 'Frosty\source-build\project'
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
 try {
+    Write-Step "Installer revision: $script:FrostyInstallerRevision"
     Write-Step 'Preparing Frosty source'
     if (-not [string]::IsNullOrWhiteSpace($sourceDirectory)) {
         if (-not (Test-Path (Join-Path $sourceDirectory 'package.json'))) { throw 'FROSTY_SOURCE_DIR must point to the project root containing package.json.' }
@@ -354,11 +357,37 @@ try {
         if (Test-Path (Join-Path $published $forbidden)) { throw "Refusing to install a bundled $forbidden. FFmpeg must remain separately installed under its own license." }
     }
 
-    Write-Step "Installing Frosty to $installDir"
-    Get-Process -Name 'Frosty' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-    if (Test-Path -LiteralPath $installDir) { Remove-Item -LiteralPath $installDir -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path $installDir | Out-Null
-    Copy-Item -Path (Join-Path $published '*') -Destination $installDir -Recurse -Force
+    Write-Step "Staging Frosty update for $installDir"
+    $installParent = Split-Path -Parent $installDir
+    New-Item -ItemType Directory -Force -Path $installParent | Out-Null
+    $installStage = Join-Path $installParent ('Frosty.installing-' + [guid]::NewGuid().ToString('N'))
+    $installBackup = Join-Path $installParent ('Frosty.backup-' + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $installStage | Out-Null
+    Copy-Item -Path (Join-Path $published '*') -Destination $installStage -Recurse -Force
+    if (-not (Test-Path -LiteralPath (Join-Path $installStage 'Frosty.exe')) -or
+        -not (Test-Path -LiteralPath (Join-Path $installStage 'Uninstall-Frosty.ps1'))) {
+        throw 'Staged build is incomplete; the existing Frosty installation has been left untouched.'
+    }
+
+    # Stop only the Frosty process running from this install path, not another app with the same process name.
+    $currentExe = [System.IO.Path]::GetFullPath((Join-Path $installDir 'Frosty.exe'))
+    Get-Process -Name 'Frosty' -ErrorAction SilentlyContinue | ForEach-Object {
+        try {
+            if ([System.IO.Path]::GetFullPath($_.Path) -ieq $currentExe) {
+                Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+            }
+        } catch { }
+    }
+    if (Test-Path -LiteralPath $installDir) { Move-Item -LiteralPath $installDir -Destination $installBackup }
+    try {
+        Move-Item -LiteralPath $installStage -Destination $installDir
+        $installStage = $null
+    } catch {
+        if ((Test-Path -LiteralPath $installBackup) -and -not (Test-Path -LiteralPath $installDir)) {
+            Move-Item -LiteralPath $installBackup -Destination $installDir
+        }
+        throw
+    }
 
     $uninstallScript = Join-Path $installDir 'Uninstall-Frosty.ps1'
     if (-not (Test-Path -LiteralPath $uninstallScript)) { throw 'The native build did not include Uninstall-Frosty.ps1; refusing to register an incomplete installation.' }
@@ -385,7 +414,7 @@ try {
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $sourceSnapshot) | Out-Null
     if (Test-Path -LiteralPath $sourceSnapshot) { Remove-Item -LiteralPath $sourceSnapshot -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $sourceSnapshot | Out-Null
-    & robocopy $src $sourceSnapshot /E /NFL /NDL /NJH /NJS /NP /XD 'node_modules' '.git' 'dist' 'native\build'
+    & robocopy $src $sourceSnapshot /E /NFL /NDL /NJH /NJS /NP /XD 'node_modules' '.git' 'dist' (Join-Path $src 'native\build') (Join-Path $src 'native\build-p2') (Join-Path $src 'native\build-test-runner')
     if ($LASTEXITCODE -ge 8) { throw "Could not preserve the source snapshot (robocopy exit code $LASTEXITCODE)." }
     $global:LASTEXITCODE = 0
 
@@ -400,6 +429,8 @@ try {
         $shortcut.Save()
     }
 
+    if ($installBackup -and (Test-Path -LiteralPath $installBackup)) { Remove-Item -LiteralPath $installBackup -Recurse -Force }
+
     Write-Step 'Frosty installed successfully'
     Write-Host "Installed app: $(Join-Path $installDir 'Frosty.exe')" -ForegroundColor Green
     Write-Host "Source snapshot: $sourceSnapshot" -ForegroundColor Green
@@ -411,4 +442,7 @@ try {
 } finally {
     Remove-Item -LiteralPath $sourceZip -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $stage -Recurse -Force -ErrorAction SilentlyContinue
+    if ($installStage -and (Test-Path -LiteralPath $installStage)) {
+        Remove-Item -LiteralPath $installStage -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
