@@ -8,11 +8,14 @@ const TL = require('../lib/timeline');
 const rendererSource = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'app.js'), 'utf8');
 const mainSource = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
 const htmlSource = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'index.html'), 'utf8');
+const renderEngineSource = fs.readFileSync(path.join(__dirname, '..', 'lib', 'render-engine.js'), 'utf8');
 assert(rendererSource.includes('window.frosty.previewMovie(payload)'), 'Play requests the unified timeline render');
 assert(rendererSource.includes('timelinePlayback.currentTime'), 'playhead is synchronized to rendered movie time');
 assert(rendererSource.includes('TL.frameToSeconds(frame, S.tl)'), 'playhead is snapped to the project frame grid');
 assert(mainSource.includes("ipcMain.handle('preview:movie'"), 'main process exposes preview movie render');
 assert(htmlSource.includes('id="timelinePlayback"'), 'renderer has a dedicated canonical playback surface');
+assert(renderEngineSource.includes("'-fps_mode', 'passthrough'"), 'still extraction uses the current FFmpeg frame-sync option');
+assert(!renderEngineSource.includes("'-vsync', '0'"), 'still extraction does not use the removed FFmpeg -vsync option');
 (async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'frosty-preview-playback-'));
   try {
