@@ -8,7 +8,7 @@ On a fresh install, Frosty checks for a working FFmpeg executable. If none is fo
 
 For the native release ZIP, extract the archive and double-click `Install-Frosty.cmd` (or run `Install-Frosty.ps1` from PowerShell); this checks FFmpeg, offers the WinGet install, copies Frosty to `%LOCALAPPDATA%\Programs\Frosty`, creates shortcuts, and launches the app. The source-build bootstrap `installer.ps1` offers the same FFmpeg setup when it has checked out the project. The Electron/NSIS package uses its first-install hook and does not re-prompt during upgrades.
 
-To update, click **Check for updates** in the native app or run `frosty --update latest` in a terminal. The updater downloads the current source installer, runs tests, rebuilds the native app, and stages replacement of the current install.
+To update, click **Update to latest** in the native app or run `frosty --update latest` in a terminal. The updater downloads the current source installer, runs tests, rebuilds the native app, and stages replacement of the current install.
 
 To uninstall, use the app's **Uninstall** button, choose Frosty in Windows Settings → Apps → Installed apps, or run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Uninstall-Frosty.ps1"` from PowerShell. Uninstall removes Frosty's installed files, command shim, shortcuts, private vcpkg/Boost toolchain and source snapshot, and attempts to remove WinGet prerequisites Frosty's installer recorded as newly installed. Pre-existing tools and user projects/media/recovery snapshots are preserved.
 
