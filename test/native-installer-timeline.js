@@ -26,7 +26,8 @@ assert.match(installer, /scripts[\\/]build-native\.ps1/i, 'installer invokes the
 assert.match(installer, /function Get-VisualStudioInstallPaths/, 'installer discovers existing Visual Studio instances via vswhere and setup registry');
 assert.match(installer, /function Test-WinGetPackageInstalled/, 'installer detects an already installed Build Tools package');
 assert.match(installer, /Test-WinGetPackageInstalled 'Microsoft\.VisualStudio\.2022\.BuildTools'/, 'installer avoids blindly upgrading an already installed but undiscoverable Build Tools instance');
-assert.match(installer, /setup modify --installPath \$existing[^\n]*--passive --wait --norestart/, 'installer modifies the existing Visual Studio instance through setup.exe');
+assert.match(installer, /setup modify --installPath \$existing[^\n]*--passive --norestart/, 'installer modifies the existing Visual Studio instance through setup.exe');
+assert.doesNotMatch(installer, /& \$setup modify[^\n]*--wait/, 'installed setup.exe must not receive --wait, which is bootstrapper-only');
 assert.match(installer, /Desktop development with C\+\+/, 'Visual Studio failure message gives the manual C++ workload recovery path');
 assert.match(installer, /Microsoft\.VisualStudio\.Component\.VC\.Tools\.x86\.x64/, 'installer verifies the MSVC C++ component after setup');
 assert.match(installer, /Checking external FFmpeg prerequisite/i, 'installer checks the external FFmpeg prerequisite');
