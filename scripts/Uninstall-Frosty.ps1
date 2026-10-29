@@ -46,7 +46,14 @@ function Remove-ManagedFrostyArtifacts {
     if ($RemoveUntrackedPrerequisites -or $script:RemoveUntrackedPrerequisites) {
         $winget = Get-Command 'winget.exe' -ErrorAction SilentlyContinue
         if (-not $winget) { $winget = Get-Command 'winget' -ErrorAction SilentlyContinue }
-        $knownIds = @('OpenJS.NodeJS.LTS','Kitware.CMake','Microsoft.DotNet.SDK.8','Python.Python.3.13','Microsoft.VisualStudio.2022.BuildTools','Gyan.FFmpeg')
+        $knownIds = @(
+            'OpenJS.NodeJS.LTS','OpenJS.NodeJS','OpenJS.NodeJS.20','OpenJS.NodeJS.22',
+            'Kitware.CMake',
+            'Microsoft.DotNet.SDK.8','Microsoft.DotNet.SDK.9','Microsoft.DotNet.SDK.10',
+            'Python.Python.3.11','Python.Python.3.12','Python.Python.3.13',
+            'Microsoft.VisualStudio.2022.BuildTools','Microsoft.VisualStudio.2022.Community',
+            'Gyan.FFmpeg','BtbN.FFmpeg.GPL'
+        )
         foreach ($id in $knownIds | Where-Object { $_ -notin $ownedIds }) {
             if (-not $winget) { Write-Warning "WinGet is unavailable; cannot check untracked prerequisite $id."; continue }
             $listed = (& $winget.Source list --id $id --exact --disable-interactivity 2>&1 | Out-String)
