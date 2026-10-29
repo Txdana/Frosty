@@ -67,6 +67,16 @@ function Remove-ManagedFrostyArtifacts {
     Remove-Item -LiteralPath (Join-Path $managedRoot 'toolchain') -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $managedRoot 'source-build') -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $managedRoot 'source-build.zip') -Force -ErrorAction SilentlyContinue
+
+    # The dedicated cleanup helper additionally checks Chocolatey/Scoop and
+    # removes only known Frosty-owned build leftovers. Shared tools are removed
+    # only after the user has explicitly opted in above.
+    $cleanupScript = Join-Path $installDir 'Cleanup-Frosty-Testing.ps1'
+    if (($RemoveUntrackedPrerequisites -or $script:RemoveUntrackedPrerequisites) -and (Test-Path -LiteralPath $cleanupScript)) {
+        Write-Host '[Frosty] Checking for additional testing tools installed through other package managers...' -ForegroundColor Cyan
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $cleanupScript -Apply -IncludeSharedTools -Confirm:$false
+        if ($LASTEXITCODE -ne 0) { Write-Warning 'Some additional testing tools or leftovers could not be removed. Review the cleanup output above.' }
+    }
 }
 if (-not (Test-Path -LiteralPath $installDirFull)) {
     $staleStartMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
