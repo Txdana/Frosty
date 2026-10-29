@@ -68,6 +68,8 @@ Copy-Item -Force (Join-Path $PSScriptRoot 'Install-Frosty.ps1') (Join-Path $dest
 Copy-Item -Force (Join-Path $PSScriptRoot 'Install-Frosty.cmd') (Join-Path $destination 'Install-Frosty.cmd')
 Copy-Item -Force (Join-Path $PSScriptRoot 'Uninstall-Frosty.ps1') (Join-Path $destination 'Uninstall-Frosty.ps1')
 Copy-Item -Force (Join-Path $PSScriptRoot 'Uninstall-Frosty.cmd') (Join-Path $destination 'Uninstall-Frosty.cmd')
+Copy-Item -Force (Join-Path $PSScriptRoot 'Update-Frosty.ps1') (Join-Path $destination 'Update-Frosty.ps1')
+Copy-Item -Force (Join-Path $PSScriptRoot 'frosty.cmd') (Join-Path $destination 'frosty.cmd')
 $frostyVersion = (Get-Content (Join-Path $root 'package.json') -Raw | ConvertFrom-Json).version
 Set-Content -LiteralPath (Join-Path $destination 'FROSTY_VERSION.txt') -Value $frostyVersion -Encoding ascii
 Write-Host '[Runtime] Checking external FFmpeg runtime (not bundled or relicensed by Frosty)...' -ForegroundColor Cyan
