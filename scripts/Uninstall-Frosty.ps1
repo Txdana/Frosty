@@ -68,14 +68,19 @@ function Remove-ManagedFrostyArtifacts {
     Remove-Item -LiteralPath (Join-Path $managedRoot 'source-build') -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath (Join-Path $managedRoot 'source-build.zip') -Force -ErrorAction SilentlyContinue
 
-    # The dedicated cleanup helper additionally checks Chocolatey/Scoop and
-    # removes only known Frosty-owned build leftovers. Shared tools are removed
-    # only after the user has explicitly opted in above.
+    # Always run the helper so Frosty-owned temporary build/update caches are
+    # cleaned during every uninstall. Shared developer tools are only removed
+    # when the user explicitly approved that separate prompt (or passed the
+    # explicit -RemoveUntrackedPrerequisites switch).
     $cleanupScript = Join-Path $installDir 'Cleanup-Frosty-Testing.ps1'
-    if (($RemoveUntrackedPrerequisites -or $script:RemoveUntrackedPrerequisites) -and (Test-Path -LiteralPath $cleanupScript)) {
-        Write-Host '[Frosty] Checking for additional testing tools installed through other package managers...' -ForegroundColor Cyan
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $cleanupScript -Apply -IncludeSharedTools -Confirm:$false
-        if ($LASTEXITCODE -ne 0) { Write-Warning 'Some additional testing tools or leftovers could not be removed. Review the cleanup output above.' }
+    if (Test-Path -LiteralPath $cleanupScript) {
+        Write-Host '[Frosty] Cleaning Frosty-owned temporary artifacts and checking for leftover testing tools...' -ForegroundColor Cyan
+        if ($RemoveUntrackedPrerequisites -or $script:RemoveUntrackedPrerequisites) {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $cleanupScript -Apply -IncludeSharedTools -Confirm:$false
+        } else {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $cleanupScript -Apply -Confirm:$false
+        }
+        if ($LASTEXITCODE -ne 0) { Write-Warning 'Some testing tools or leftovers could not be removed. Review the cleanup output above.' }
     }
 }
 if (-not (Test-Path -LiteralPath $installDirFull)) {
