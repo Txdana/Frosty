@@ -10,7 +10,7 @@ For the native release ZIP, extract the archive and double-click `Install-Frosty
 
 To update, click **Update to latest** in the native app or run `frosty --update latest` in a terminal. The updater downloads the current source installer, runs tests, rebuilds the native app, and stages replacement of the current install.
 
-To uninstall, use the app's **Uninstall** button, choose Frosty in Windows Settings → Apps → Installed apps, or run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Uninstall-Frosty.ps1"` from PowerShell. Uninstall removes Frosty's installed files, command shim, shortcuts, private vcpkg/Boost toolchain and source snapshot, and attempts to remove WinGet prerequisites Frosty's installer recorded as newly installed. Pre-existing tools and user projects/media/recovery snapshots are preserved.
+To uninstall, use the app's **Uninstall** button, choose Frosty in Windows Settings → Apps → Installed apps, or run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Uninstall-Frosty.ps1"` from PowerShell. Uninstall removes Frosty's installed files, command shim, shortcuts, private vcpkg/Boost toolchain and source snapshot, and attempts to remove WinGet prerequisites Frosty's installer recorded as newly installed. Pre-existing tools are preserved unless the user explicitly opts in to removing common untracked WinGet packages left by older testing installs; that option warns it may affect other apps. User projects/media/recovery snapshots are preserved.
 
 ## Manual or custom FFmpeg setup
 
