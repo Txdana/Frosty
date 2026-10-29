@@ -5,11 +5,11 @@ using System.Linq;
 
 namespace Frosty.Desktop;
 
-/// <summary>Finds tools shipped beside Frosty first, then uses an explicit override or PATH.</summary>
+/// <summary>Resolves explicit overrides, app-local tools, the reviewed WinGet package cache, then PATH.</summary>
 internal static class MediaToolPaths
 {
-    public static string Ffmpeg => Resolve("ffmpeg", "FROSTY_FFMPEG") ?? (OperatingSystem.IsWindows() ? "ffmpeg.exe" : "ffmpeg");
-    public static string Ffprobe => Resolve("ffprobe", "FROSTY_FFPROBE") ?? (OperatingSystem.IsWindows() ? "ffprobe.exe" : "ffprobe");
+    public static string Ffmpeg => Resolve("ffmpeg", "FROSTY_FFMPEG") ?? throw new FileNotFoundException("FFmpeg was not found. Set FROSTY_FFMPEG or add ffmpeg to PATH.");
+    public static string Ffprobe => Resolve("ffprobe", "FROSTY_FFPROBE") ?? throw new FileNotFoundException("FFprobe was not found. Set FROSTY_FFPROBE or add ffprobe to PATH.");
     public static bool HasFfmpeg => Resolve("ffmpeg", "FROSTY_FFMPEG") is not null;
     public static bool HasFfprobe => Resolve("ffprobe", "FROSTY_FFPROBE") is not null;
 
