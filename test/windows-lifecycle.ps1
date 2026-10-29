@@ -68,6 +68,7 @@ try {
     Assert-That (-not (Test-Path -LiteralPath $desktopLink)) 'Desktop shortcut still exists after uninstall'
     Assert-That (-not (Test-Path -LiteralPath $uninstallKey)) 'Add/Remove Programs entry still exists after uninstall'
     Assert-That (-not (Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\frosty.cmd'))) 'PATH command shim still exists after uninstall'
+    Assert-That (-not (Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'Programs\Frosty'))) 'Frosty install directory still exists after uninstall'
 
     Write-Host '[Lifecycle 4/5] Uninstall when already removed (must succeed and stay clean)...' -ForegroundColor Cyan
     $uninstaller = Join-Path $package 'Uninstall-Frosty.ps1'
