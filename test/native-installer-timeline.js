@@ -79,7 +79,8 @@ assert.match(uninstaller, /WaitForProcessId/, 'uninstaller can wait for the in-a
 assert.match(uninstaller, /Start Menu\\Programs/);
 assert.match(uninstaller, /Remove-Item -LiteralPath \$uninstallKey/, 'uninstaller removes its own registry registration');
 assert.match(uninstallLauncher, /Uninstall-Frosty\.ps1/);
-assert.doesNotMatch(uninstaller, /Remove-Item[^\n]*Frosty\\(Recovery|source-build)/i, 'uninstaller must not delete recovery data or source snapshot');
+assert.doesNotMatch(uninstaller, /Remove-Item[^\n]*Recovery/i, 'uninstaller must preserve recovery data');
+assert.match(uninstaller, /Join-Path \$managedRoot 'source-build'/, 'uninstaller removes the installer-owned source snapshot');
 assert.match(installer, /no Electron fallback/i, 'installer does not silently fall back to Electron');
 assert.doesNotMatch(installer, /(^|\n)\s*(electron-builder|npm\s+run\s+dist:win|.*electron:dist)(\s|$)/i, 'installer does not invoke Electron packaging');
 assert.match(buildNative, /Visual Studio 17 2022/, 'native build fixes the supported Windows CMake generator');
