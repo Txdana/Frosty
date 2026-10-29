@@ -20,7 +20,7 @@ The installer downloads the source over HTTPS, verifies that it is a Frosty proj
 
 ## Update Frosty
 
-In the app, click **Check for updates** in the top bar. From a terminal, run:
+In the app, click **Update to latest** in the top bar. From a terminal, run:
 
 ```powershell
 frosty --update latest
