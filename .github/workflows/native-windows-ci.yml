@@ -24,6 +24,14 @@ jobs:
           vcpkg install boost-property-tree:x64-windows
           "BOOST_ROOT=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\include" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Install external FFmpeg required by media regression tests
+        shell: pwsh
+        run: |
+          choco install ffmpeg --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "Chocolatey failed to install FFmpeg (exit code $LASTEXITCODE)." }
+          $ffmpeg = Get-Command ffmpeg.exe -ErrorAction Stop
+          & $ffmpeg.Source -hide_banner -version
+          if ($LASTEXITCODE -ne 0) { throw "The installed FFmpeg executable failed its version check." }
       - name: Install JavaScript dependencies
         run: npm ci
       - name: Run complete portable suite, native CTest, WPF/GPU source audits and Windows WPF smoke test
