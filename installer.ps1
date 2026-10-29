@@ -174,9 +174,27 @@ function Ensure-VisualCppToolchain {
         if (-not $setup) {
             throw "Visual Studio is installed at '$existing', but the Visual Studio Installer setup.exe was not found. Open Visual Studio Installer, repair Build Tools 2022, and select Desktop development with C++."
         }
-        Write-Step "Adding the required C++ workload and Windows SDK to the existing Visual Studio instance: $existing"
-        & $setup modify --installPath $existing --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --norestart
-        $setupExitCode = $LASTEXITCODE
+        Write-Step "Requesting administrator permission to add the C++ workload and Windows SDK to: $existing"
+        Write-Host 'Windows may show a User Account Control prompt for Visual Studio Installer. Approve it to continue.' -ForegroundColor Yellow
+        # Visual Studio setup.exe rejects --passive unless it was launched elevated.
+        # Elevate just this prerequisite operation; do not elevate the whole Frosty build/install.
+        $setupArguments = @(
+            'modify',
+            '--installPath', ('"' + $existing + '"'),
+            '--add', 'Microsoft.VisualStudio.Workload.VCTools',
+            '--includeRecommended',
+            '--passive',
+            '--norestart'
+        )
+        try {
+            $setupProcess = Start-Process -FilePath $setup -ArgumentList $setupArguments -Verb RunAs -Wait -PassThru -ErrorAction Stop
+            $setupExitCode = $setupProcess.ExitCode
+        } catch {
+            if ($_.Exception.NativeErrorCode -eq 1223) {
+                throw 'Windows administrator permission was declined. Rerun Frosty setup and approve the Visual Studio Installer UAC prompt, or open Visual Studio Installer manually and add Desktop development with C++.'
+            }
+            throw "Could not launch Visual Studio Installer with administrator permission: $($_.Exception.Message). Open Visual Studio Installer manually, add Desktop development with C++, and rerun Frosty setup."
+        }
         if ($setupExitCode -notin @(0, 3010)) {
             throw "Visual Studio Installer could not add the C++ workload (exit code $setupExitCode). Open Visual Studio Installer, choose Build Tools 2022 > Modify, select Desktop development with C++, and finish the installation. Then rerun this Frosty installer."
         }
