@@ -30,13 +30,32 @@ The command downloads the current `master` source installer, reruns regression t
 
 ## Uninstall Frosty
 
-Click **Uninstall** in the native app's top bar, or uninstall **Frosty** from **Windows Settings → Apps → Installed apps**.
+From a new terminal, run:
 
-From PowerShell, run:
+```powershell
+frosty --uninstall
+```
 
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Uninstall-Frosty.ps1"
+This launches the installed Uninstall-Frosty.ps1 script. It asks for confirmation before removing Frosty, then asks separately whether to remove common untracked developer tools that may have been installed during older testing. Answer **Yes** to the optional cleanup prompt if you want it to check and uninstall detected tools through supported package managers. Removing shared tools can affect other applications, so choose **No** if you still use them.
 
-You can also launch `%LOCALAPPDATA%\Programs\Frosty\Uninstall-Frosty.cmd` from File Explorer or a terminal. To inspect leftovers from older testing installs without deleting anything, run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\\Programs\\Frosty\\Cleanup-Frosty-Testing.ps1"`. To remove detected shared development tools, run the same command with `-Apply -IncludeSharedTools`; review the displayed plan first. The normal uninstaller invokes the expanded cleanup helper when you explicitly approve removal of untracked tools. The uninstaller removes Frosty's installed application files, command shim, shortcuts, Windows uninstall registration, private vcpkg/Boost toolchain and source snapshot. It attempts to uninstall WinGet prerequisites recorded as newly installed by Frosty's installer (for example Node.js, CMake, .NET SDK, Python, and FFmpeg). Pre-existing tools are not removed automatically; the GUI/interactive uninstaller separately asks whether to remove common untracked WinGet packages left by older testing installs, with a warning that this can affect other apps. Failed package removals are reported for manual cleanup. Saved `.frosty` projects, original media, and recovery snapshots are preserved. The app asks about unsaved edits and attempts a recovery snapshot before proceeding.
+You can also uninstall from the native app's **Uninstall** button or **Windows Settings → Apps → Installed apps**.
+
+Direct PowerShell alternatives:
+
+```powershell
+# Run the interactive uninstaller
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Uninstall-Frosty.ps1"
+
+# Preview leftover testing tools and Frosty-owned build caches (no changes are made)
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Cleanup-Frosty-Testing.ps1"
+
+# Explicitly uninstall detected shared tools and remove Frosty-owned build leftovers
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Cleanup-Frosty-Testing.ps1" -Apply -IncludeSharedTools
+```
+
+The cleanup helper checks supported WinGet, Chocolatey, and Scoop package installations for common testing dependencies, including Node.js, CMake, .NET SDKs, Python, Visual Studio Build Tools, and FFmpeg. Detection is limited to its known package IDs; manually installed tools and other package IDs may need separate removal.
+
+The uninstaller removes Frosty's application files, command shim, shortcuts, Windows uninstall registration, private vcpkg/Boost toolchain, source snapshot, and recorded installer-managed WinGet prerequisites where possible. It preserves .frosty projects, original media, and recovery snapshots. Failed or unsupported package removals are reported; no script can guarantee removal of every dependency installed by unrelated installers or package managers.
 
 ### Prerequisites
 
