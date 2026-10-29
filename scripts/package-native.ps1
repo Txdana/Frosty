@@ -25,7 +25,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Native build failed; no package was created.' 
 $published=Join-Path $root 'dist/native-windows'
 if (-not (Test-Path (Join-Path $published 'Frosty.exe'))) { throw 'Native publish did not produce Frosty.exe.' }
 foreach ($forbiddenMediaBinary in @('ffmpeg.exe', 'ffprobe.exe')) {
-  if (Test-Path (Join-Path $published $forbiddenMediaBinary)) { throw "Refusing to package $forbiddenMediaBinary: FFmpeg/FFprobe must remain separately installed under their own license terms." }
+  if (Test-Path (Join-Path $published $forbiddenMediaBinary)) { throw "Refusing to package ${forbiddenMediaBinary}: FFmpeg/FFprobe must remain separately installed under their own license terms." }
 }
 $release=Join-Path $root 'dist/releases'
 New-Item -ItemType Directory -Force -Path $release | Out-Null

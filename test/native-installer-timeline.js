@@ -94,7 +94,7 @@ for (const label of ['Split selected at playhead', 'Insert 1s gap at playhead', 
 for (const feature of ['RenderTimelineCanvas', 'SnapTimelineTime', 'TimelineSplitAtPlayhead_Click', 'TimelineSelectAll_Click', 'TimelineInsertGap_Click', 'TimelineRippleDeleteRange_Click', 'RippleDeleteSelected_Click', 'ApplyClipEditOperations', 'TimelineCanvas_MouseMove', 'TimelineCanvas_MouseLeftButtonUp', 'MainWindow_PreviewKeyDown', 'ClipNameText', 'ClipEnabledCheck', 'ClipVolumeText', 'ClipShearXText', 'ClipShearYText', 'RefreshTimeline()']) {
   assert.ok(windowCs.includes(feature), `timeline editing implementation missing: ${feature}`);
 }
-assert.match(cmake, /add_executable\(frosty_core_tests tests\/core_tests\.cpp src\/core\.cpp\)/, 'Windows core tests compile the implementation instead of linking unexported C++ symbols from the DLL');
+assert.match(cmake, /add_executable\(frosty_core_tests tests\/core_tests\.cpp src\/core\.cpp src\/c_api\.cpp\)/, 'Windows core tests compile the implementation instead of linking unexported C++ symbols from the DLL');
 assert.doesNotMatch(cmake, /target_link_libraries\(frosty_core_tests PRIVATE frosty_core\)/, 'core unit tests do not depend on non-exported internal DLL symbols');
 assert.match(coreHeader, /SplitClip/);
 assert.match(core, /Clip split/);

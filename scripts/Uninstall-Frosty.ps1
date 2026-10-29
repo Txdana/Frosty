@@ -91,7 +91,8 @@ Remove-Item -LiteralPath $uninstallKey -Recurse -Force -ErrorAction SilentlyCont
 # Move the calling PowerShell session out of the install directory before scheduling deletion.
 Set-Location -LiteralPath $env:TEMP
 $escapedInstallDir = $installDirFull.Replace("'", "''")
-$deleteCommand = "Start-Sleep -Seconds 2; Remove-Item -LiteralPath '$escapedInstallDir' -Recurse -Force -ErrorAction SilentlyContinue"
+# Retry for up to ~30 seconds: files can stay locked briefly while Frosty or antivirus releases them.
+$deleteCommand = "for (`$i = 0; `$i -lt 30; `$i++) { Start-Sleep -Seconds 1; Remove-Item -LiteralPath '$escapedInstallDir' -Recurse -Force -ErrorAction SilentlyContinue; if (-not (Test-Path -LiteralPath '$escapedInstallDir')) { break } }"
 $encodedDeleteCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($deleteCommand))
 $powerShellCommand = Get-Command 'powershell.exe' -ErrorAction SilentlyContinue
 if ($powerShellCommand) {

@@ -58,18 +58,18 @@ if ($existing -and (Test-FfmpegExecutable $existing)) {
 }
 
 if ($CheckOnly) {
-    Write-Error 'FFmpeg was not found or could not be executed.'
+    Write-Error 'FFmpeg was not found or could not be executed.' -ErrorAction Continue
     exit 1
 }
 if (-not $InstallIfMissing) {
-    Write-Error 'Use -CheckOnly to inspect the prerequisite or -InstallIfMissing after user consent.'
+    Write-Error 'Use -CheckOnly to inspect the prerequisite or -InstallIfMissing after user consent.' -ErrorAction Continue
     exit 2
 }
 
 $winget = Get-Command 'winget.exe' -ErrorAction SilentlyContinue
 if (-not $winget) { $winget = Get-Command 'winget' -ErrorAction SilentlyContinue }
 if (-not $winget -or -not $winget.Source) {
-    Write-Error 'WinGet is unavailable. Install App Installer from the Microsoft Store or install FFmpeg manually from https://ffmpeg.org/download.html.'
+    Write-Error 'WinGet is unavailable. Install App Installer from the Microsoft Store or install FFmpeg manually from https://ffmpeg.org/download.html.' -ErrorAction Continue
     exit 10
 }
 
@@ -80,7 +80,7 @@ $arguments = @(
 )
 & $winget.Source @arguments
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "WinGet failed to install Gyan.FFmpeg (exit code $LASTEXITCODE)."
+    Write-Error "WinGet failed to install Gyan.FFmpeg (exit code $LASTEXITCODE)." -ErrorAction Continue
     exit $LASTEXITCODE
 }
 
@@ -93,7 +93,7 @@ for ($attempt = 0; $attempt -lt 5 -and -not $installed; $attempt++) {
     Start-Sleep -Milliseconds 500
 }
 if (-not $installed) {
-    Write-Error 'WinGet completed, but ffmpeg.exe could not be located or executed. Open a new session or install FFmpeg manually.'
+    Write-Error 'WinGet completed, but ffmpeg.exe could not be located or executed. Open a new session or install FFmpeg manually.' -ErrorAction Continue
     exit 11
 }
 Write-Output "FFmpeg installed and verified: $installed"

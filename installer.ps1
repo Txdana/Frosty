@@ -45,7 +45,15 @@ function Invoke-WinGetInstall([string]$Id, [string[]]$ExtraArgs = @()) {
     & $winget @wingetArgs
     $code = $LASTEXITCODE
     Refresh-ProcessPath
+    # 0x8A150061 (already installed) and 0x8A15002B (no applicable upgrade) are not failures; every caller re-verifies the tool afterwards.
+    if ($code -in @(-1978335135, -1978335189)) { Write-Note "WinGet reports $Id is already installed and up to date (exit code $code)."; return }
     if ($code -ne 0) { throw "WinGet failed to install $Id (exit code $code). Resolve the WinGet error and rerun the same installer command." }
+}
+
+function ConvertTo-CMakeVersion([string]$Text) {
+    # Accept pre-release builds such as '4.0.0-rc1', which [version] cannot parse directly.
+    if ($Text -match '^\s*(\d+\.\d+(\.\d+)?)') { return [version]$Matches[1] }
+    throw "Could not parse the CMake version '$Text'. Update CMake and rerun."
 }
 
 function Test-Node20 {
@@ -208,7 +216,9 @@ function Ensure-VisualCppToolchain {
         throw "WinGet reports Visual Studio Build Tools 2022 is already installed, but vswhere and the Visual Studio Setup registry did not expose a usable instance. Frosty will not try to upgrade it blindly. Open Visual Studio Installer, choose Build Tools 2022 > Modify (or Repair), select Desktop development with C++ including MSVC x64/x86 tools and a Windows 10/11 SDK, finish setup, then rerun this installer."
     } else {
         $override = '--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended'
-        Invoke-WinGetInstall 'Microsoft.VisualStudio.2022.BuildTools' @('--override', $override)
+        Write-Note 'Installing Visual Studio Build Tools needs administrator permission; approve any User Account Control prompt.'
+        try { Invoke-WinGetInstall 'Microsoft.VisualStudio.2022.BuildTools' @('--override', $override) }
+        catch { throw "$($_.Exception.Message) If the Visual Studio log mentions exit code 5007 or 'vs.iselevated False', close this window, open PowerShell with 'Run as administrator', and rerun the installer command." }
     }
 
     Refresh-ProcessPath
@@ -326,13 +336,13 @@ try {
     if (-not (Test-Command 'cmake')) { Invoke-WinGetInstall 'Kitware.CMake' }
     if (-not (Test-Command 'cmake')) { throw 'CMake is missing after installation. Open a new terminal and rerun.' }
     $cmakeVersionText = (& cmake --version | Select-Object -First 1) -replace '^cmake version ', ''
-    try { $cmakeVersion = [version]$cmakeVersionText } catch { throw "Could not parse the installed CMake version '$cmakeVersionText'. Update CMake and rerun." }
+    try { $cmakeVersion = ConvertTo-CMakeVersion $cmakeVersionText } catch { throw "Could not parse the installed CMake version '$cmakeVersionText'. Update CMake and rerun." }
     if ($cmakeVersion -lt [version]'3.20') {
         Invoke-WinGetInstall 'Kitware.CMake'
         Refresh-ProcessPath
         if (-not (Test-Command 'cmake')) { throw 'CMake is missing after the update. Open a new terminal and rerun.' }
         $cmakeVersionText = (& cmake --version | Select-Object -First 1) -replace '^cmake version ', ''
-        try { $cmakeVersion = [version]$cmakeVersionText } catch { throw "Could not parse the updated CMake version '$cmakeVersionText'. Update CMake and rerun." }
+        try { $cmakeVersion = ConvertTo-CMakeVersion $cmakeVersionText } catch { throw "Could not parse the updated CMake version '$cmakeVersionText'. Update CMake and rerun." }
         if ($cmakeVersion -lt [version]'3.20') { throw "CMake $cmakeVersion is still installed after the update; Frosty requires CMake 3.20 or newer. Remove older CMake entries from PATH and rerun." }
     }
     if (-not (Test-Command 'cmake')) { throw 'CMake is missing after installation. Open a new terminal and rerun.' }

@@ -12,7 +12,8 @@ $powerShellScripts = @(
     'scripts/install-ffmpeg.ps1',
     'scripts/build-native.ps1',
     'scripts/package-native.ps1',
-    'test/windows-e2e.ps1'
+    'test/windows-e2e.ps1',
+    'test/windows-lifecycle.ps1'
 )
 foreach ($relativePath in $powerShellScripts) {
     $scriptPath = Join-Path $root $relativePath

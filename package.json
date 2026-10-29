@@ -25,6 +25,7 @@
     "electron:dist:win": "electron-builder --win nsis",
     "test:native-render": "node test/native-transform-render.js",
     "test:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File test/windows-e2e.ps1",
+    "test:lifecycle": "powershell -NoProfile -ExecutionPolicy Bypass -File test/windows-lifecycle.ps1",
     "test:native": "cmake -S native -B native/build-test-runner -DCMAKE_BUILD_TYPE=Release && cmake --build native/build-test-runner --config Release --parallel 2 && ctest --test-dir native/build-test-runner -C Release --output-on-failure",
     "test:semantic-search": "node test/scene-index.js && node test/embedding-client.js"
   },

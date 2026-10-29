@@ -8,7 +8,7 @@ const tests = [
   'analysis-static.js', 'color-audio-production.js', 'scene-index.js', 'embedding-client.js',
   'brag-reach.js', 'agent-safety.js', 'frame-preview-playback.js', 'sequence-render-runtime.js',
   'bezier-mask-runtime.js', 'project-format.js', 'native-installer-timeline.js',
-  'native-transform-render.js', 'native-ai-planner.js', 'reference-template.js', 'reference-template-runtime.js', 'reference-comparator-runtime.js', 'motion-reference-integration.js', 'motion-design.js', 'motion-integration-static.js'
+  'native-transform-render.js', 'native-ai-planner.js', 'reference-template.js', 'reference-template-runtime.js', 'reference-comparator-runtime.js', 'motion-reference-integration.js', 'motion-design.js', 'motion-integration-static.js', 'powershell-syntax.js'
 ];
 function run(command, args, label, options = {}) {
   console.log(`\n[TEST] ${label}`);

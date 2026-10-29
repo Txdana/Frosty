@@ -36,6 +36,9 @@ jobs:
         run: npm ci
       - name: Run complete portable suite, native CTest, WPF/GPU source audits and Windows WPF smoke test
         run: npm test
+      - name: Install / uninstall lifecycle test (isolated profile)
+        shell: pwsh
+        run: ./test/windows-lifecycle.ps1
       - name: Upload published native WPF smoke-test build
         if: always() && hashFiles('dist/native-windows-e2e/Frosty.exe') != ''
         uses: actions/upload-artifact@v4
