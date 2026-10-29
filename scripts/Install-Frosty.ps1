@@ -30,7 +30,14 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Step "Installing Frosty to $installDir"
 if ($packageRoot.TrimEnd('\\') -ne $installDir.TrimEnd('\\')) {
-    Get-Process -Name 'Frosty' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    $installedExe = [System.IO.Path]::GetFullPath((Join-Path $installDir 'Frosty.exe'))
+    Get-Process -Name 'Frosty' -ErrorAction SilentlyContinue | ForEach-Object {
+        try {
+            if ([System.IO.Path]::GetFullPath($_.Path) -ieq $installedExe) {
+                Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+            }
+        } catch { }
+    }
     New-Item -ItemType Directory -Force -Path $installDir | Out-Null
     Get-ChildItem -LiteralPath $packageRoot -Force | Where-Object { $_.Name -notin @('Install-Frosty.ps1', 'Install-Frosty.cmd') } | ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination $installDir -Recurse -Force
