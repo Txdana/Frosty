@@ -18,6 +18,10 @@ assert.strictEqual(safety.permissionForTool('web_search', {}), false, 'web acces
 assert.strictEqual(safety.permissionForTool('download_media', { downloads: true }), true);
 assert.strictEqual(safety.permissionForTool('generate_image', { imageGeneration: true }), true);
 assert.strictEqual(safety.permissionForTool('apply_ops', {}), true, 'local timeline edits do not require external permission');
+assert(mainSource.includes('nodeIntegration: false'), 'Electron renderer has Node integration disabled');
+assert(mainSource.includes('contextIsolation: true') && mainSource.includes('sandbox: true'), 'Electron renderer is context-isolated and sandboxed');
+assert(mainSource.includes("win.webContents.on('will-navigate'"), 'Electron blocks renderer navigation away from its trusted local UI');
+assert(mainSource.includes("win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))"), 'Electron denies unreviewed child windows');
 const bad = safety.snapshot(after); bad.video[0].out = bad.video[0].in;
 const invalid = safety.validateEdit(before, bad);
 assert.strictEqual(invalid.valid, false, 'invalid timeline changes fail validation');

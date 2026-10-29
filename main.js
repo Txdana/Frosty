@@ -95,9 +95,16 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1500, height: 900, minWidth: 1100, minHeight: 700, backgroundColor: '#0b1220', title: 'Frosty',
     icon: path.join(__dirname, 'assets', 'frosty.ico'),
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: false },
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true, sandbox: true },
   });
   win.setMenuBarVisibility(false);
+  // Keep the legacy Electron renderer in a sandbox and prevent renderer content from
+  // navigating away from the trusted local UI or opening arbitrary child windows.
+  const rendererEntry = pathToFileURL(path.join(__dirname, 'renderer', 'index.html')).href;
+  win.webContents.on('will-navigate', (event, targetUrl) => {
+    if (targetUrl !== rendererEntry) event.preventDefault();
+  });
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 }
 app.whenReady().then(createWindow);

@@ -27,7 +27,7 @@ assert.match(installer, /function Get-VisualStudioInstallPaths/, 'installer disc
 assert.match(installer, /function Test-WinGetPackageInstalled/, 'installer detects an already installed Build Tools package');
 assert.match(installer, /Test-WinGetPackageInstalled 'Microsoft\.VisualStudio\.2022\.BuildTools'/, 'installer avoids blindly upgrading an already installed but undiscoverable Build Tools instance');
 assert.match(installer, /Start-Process -FilePath \$setup -ArgumentList \$setupArguments -Verb RunAs -Wait -PassThru/, 'installer elevates the existing Visual Studio setup operation through UAC');
-assert.match(installer, /'--installPath', \('\"' \+ \$existing \+ '\"'\)/, 'installer quotes Visual Studio install paths when passing command-line arguments');
+assert.match(installer, /'--installPath', \('"'\s*\+\s*\$existing\s*\+\s*'"'\)/, 'installer quotes Visual Studio install paths when passing command-line arguments');
 assert.match(installer, /--passive[\s\S]*--norestart/, 'existing Visual Studio workload setup uses passive mode and prevents automatic restart');
 assert.match(installer, /nativeErrorCode\.Value -eq 1223/, 'installer reports when the user declines the Visual Studio UAC prompt');
 assert.doesNotMatch(installer, /^\s*& \$setup modify/m, 'installer does not launch passive Visual Studio setup without elevation');
