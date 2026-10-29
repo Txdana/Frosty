@@ -28,7 +28,7 @@ const cmake = read('native/CMakeLists.txt');
 assert.match(installer, /scripts[\\/]build-native\.ps1/i, 'installer invokes the native C++/WPF build');
 assert.match(installer, /function Get-VisualStudioInstallPaths/, 'installer discovers existing Visual Studio instances via vswhere and setup registry');
 assert.match(installer, /FrostyInstallerRevision = 'audit-2026-10-29-2'/, 'installer prints a revision marker so stale CDN scripts can be identified');
-assert.match(updater, /Txdana\\/Frosty\\/master\\/installer\.ps1/, 'terminal updater downloads the current source installer');
+assert.match(updater, /raw\.githubusercontent\.com\/Txdana\/Frosty\/master\/installer\.ps1/, 'terminal updater downloads the current source installer');
 assert.match(updater, /ValidateSet\('latest'\)/, 'updater supports the explicit latest channel');
 assert.match(commandShim, /Update-Frosty\.ps1/, 'terminal command delegates to updater');
 assert.match(buildNative, /Update-Frosty\.ps1/, 'native distribution includes updater');
