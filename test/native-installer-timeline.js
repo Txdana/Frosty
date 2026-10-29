@@ -30,6 +30,7 @@ assert.match(installer, /function Get-VisualStudioInstallPaths/, 'installer disc
 assert.match(installer, /FrostyInstallerRevision = 'audit-2026-10-29-2'/, 'installer prints a revision marker so stale CDN scripts can be identified');
 assert.match(updater, /raw\.githubusercontent\.com\/Txdana\/Frosty\/master\/installer\.ps1/, 'terminal updater downloads the current source installer');
 assert.match(updater, /ValidateSet\('latest'\)/, 'updater supports the explicit latest channel');
+assert.match(commandShim, /%~1.*--update[\s\S]*%~2.*latest/i, 'command shim validates the requested update channel and translates flags into PowerShell parameters');
 assert.match(commandShim, /Update-Frosty\.ps1/, 'terminal command delegates to updater');
 assert.match(buildNative, /Update-Frosty\.ps1/, 'native distribution includes updater');
 assert.match(installer, /Add-ManagedPackage/, 'source installer records newly installed WinGet prerequisites');
