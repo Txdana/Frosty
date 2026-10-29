@@ -18,6 +18,16 @@ The installer downloads the source over HTTPS, verifies that it is a Frosty proj
 
 **The repository must be public for this anonymous command to work.** Private repositories cannot serve the script and source archive to unauthenticated users. Review `installer.ps1` before running a remote script with `iex`. A fresh setup can download several gigabytes, and Visual Studio Build Tools may request elevation or a restart. WinGet/App Installer and an internet connection are required.
 
+## Update Frosty
+
+In the app, click **Check for updates** in the top bar. From a terminal, run:
+
+```powershell
+frosty --update latest
+```
+
+The command downloads the current `master` source installer, reruns regression tests, rebuilds the native C++/WPF application, stages the new build, and replaces the installed app. It may take several minutes and needs internet access and the Windows build prerequisites.
+
 ## Uninstall Frosty
 
 Click **Uninstall** in the native app's top bar, or uninstall **Frosty** from **Windows Settings → Apps → Installed apps**.
@@ -26,7 +36,7 @@ From PowerShell, run:
 
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\Frosty\Uninstall-Frosty.ps1"
 
-You can also launch `%LOCALAPPDATA%\Programs\Frosty\Uninstall-Frosty.cmd` from File Explorer or a terminal. The uninstaller removes Frosty's installed application files, Start Menu/Desktop shortcuts, and Windows uninstall registration. It intentionally keeps saved `.frosty` projects, original media, recovery snapshots, the source snapshot, separately installed FFmpeg, and build prerequisites. The app asks about unsaved edits and attempts a recovery snapshot before proceeding.
+You can also launch `%LOCALAPPDATA%\Programs\Frosty\Uninstall-Frosty.cmd` from File Explorer or a terminal. The uninstaller removes Frosty's installed application files, command shim, shortcuts, Windows uninstall registration, private vcpkg/Boost toolchain and source snapshot. It attempts to uninstall WinGet prerequisites recorded as newly installed by Frosty's installer (for example Node.js, CMake, .NET SDK, Python, and FFmpeg). Pre-existing tools are not removed; failed package removals are reported for manual cleanup. Saved `.frosty` projects, original media, and recovery snapshots are preserved. The app asks about unsaved edits and attempts a recovery snapshot before proceeding.
 
 ### Prerequisites
 
