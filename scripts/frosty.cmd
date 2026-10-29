@@ -1,8 +1,8 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-set "FROSTY_DIR=%LOCALAPPDATA%\Programs\Frosty"
-set "UPDATER=%FROSTY_DIR%\Update-Frosty.ps1"
-set "UNINSTALLER=%FROSTY_DIR%\Uninstall-Frosty.ps1"
+rem Frosty-owned shim marker: %LOCALAPPDATA%\Programs\Frosty\Update-Frosty.ps1
+set "UPDATER=%LOCALAPPDATA%\Programs\Frosty\Update-Frosty.ps1"
+set "UNINSTALLER=%LOCALAPPDATA%\Programs\Frosty\Uninstall-Frosty.ps1"
 
 if /I "%~1"=="--uninstall" (
   if not exist "%UNINSTALLER%" (
