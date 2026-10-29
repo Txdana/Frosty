@@ -5,6 +5,7 @@ const TL = require('../lib/timeline');
 const safety = require('../lib/agent-safety');
 const aiSource = fs.readFileSync(require.resolve('../lib/ai'), 'utf8');
 const mainSource = fs.readFileSync(require.resolve('../main'), 'utf8');
+const preloadSource = fs.readFileSync(require.resolve('../preload'), 'utf8');
 const uiSource = fs.readFileSync(require.resolve('../renderer/app.js'), 'utf8');
 const timeline = TL.empty();
 const clip = TL.addClip(timeline, { path: '/tmp/clip.mp4', name: 'clip.mp4', duration: 10 });
@@ -22,6 +23,9 @@ assert(mainSource.includes('nodeIntegration: false'), 'Electron renderer has Nod
 assert(mainSource.includes('contextIsolation: true') && mainSource.includes('sandbox: true'), 'Electron renderer is context-isolated and sandboxed');
 assert(mainSource.includes("win.webContents.on('will-navigate'"), 'Electron blocks renderer navigation away from its trusted local UI');
 assert(mainSource.includes("win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))"), 'Electron denies unreviewed child windows');
+assert(preloadSource.includes('const allowedEvents = new Set(['), 'Electron preload exposes an explicit IPC event allowlist');
+assert(preloadSource.includes('if (!allowedEvents.has(channel) || typeof callback !== \'function\')'), 'Electron preload rejects unapproved IPC event subscriptions and invalid callbacks');
+assert(preloadSource.includes('ipcRenderer.removeListener(channel, listener)'), 'Electron event subscriptions can be disposed without leaking listeners');
 const bad = safety.snapshot(after); bad.video[0].out = bad.video[0].in;
 const invalid = safety.validateEdit(before, bad);
 assert.strictEqual(invalid.valid, false, 'invalid timeline changes fail validation');
