@@ -14,7 +14,10 @@ if (-not (Test-Path -LiteralPath (Join-Path $installDir 'Frosty.exe'))) {
 if ($WaitForProcessId -gt 0) {
     try {
         $p=Get-Process -Id $WaitForProcessId -ErrorAction Stop
-        try { $p.WaitForExit() } catch { }
+        $expectedExe=[System.IO.Path]::GetFullPath((Join-Path $installDir 'Frosty.exe'))
+        if ([System.IO.Path]::GetFullPath($p.Path) -ieq $expectedExe) {
+            try { $p.WaitForExit() } catch { }
+        }
     } catch { }
 }
 Write-Host "[Frosty] Updating to the latest master build. This rebuilds and tests the native app; it may take a while." -ForegroundColor Cyan
