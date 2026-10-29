@@ -50,7 +50,7 @@ try {
     Assert-That (Test-Path -LiteralPath (Join-Path $installDir 'frosty.cmd')) 'terminal command shim missing from installation'
     $commandShim = Get-Content -LiteralPath (Join-Path $installDir 'frosty.cmd') -Raw
     Assert-That ($commandShim -match '(?i)--uninstall') 'terminal command shim does not expose --uninstall'
-    Assert-That ($commandShim -match '(?i)Uninstall-Frosty\\.ps1') 'terminal uninstall command does not call Uninstall-Frosty.ps1'
+    Assert-That ($commandShim -match '(?i)Uninstall-Frosty[.]ps1') 'terminal uninstall command does not call Uninstall-Frosty.ps1'
     Assert-That (Test-Path -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\frosty.cmd')) 'PATH command shim missing'
     Assert-That (Test-Path -LiteralPath $startMenuLink) 'Start Menu shortcut missing'
     Assert-That (Test-Path -LiteralPath $uninstallKey) 'Add/Remove Programs entry missing'
