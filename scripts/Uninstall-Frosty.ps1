@@ -11,7 +11,13 @@ $programsRoot = [System.IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Prog
 if ([System.IO.Path]::GetDirectoryName($installDirFull) -ine $programsRoot -or [System.IO.Path]::GetFileName($installDirFull) -ine 'Frosty') { throw "Refusing to uninstall from an unexpected path: $installDirFull" }
 $uninstallKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Frosty'
 function Remove-ManagedFrostyArtifacts {
-    Remove-Item -LiteralPath (Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\frosty.cmd') -Force -ErrorAction SilentlyContinue
+    $shimPath = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps\frosty.cmd'
+    if (Test-Path -LiteralPath $shimPath) {
+        $isFrostyShim = $false
+        try { $isFrostyShim = (Get-Content -LiteralPath $shimPath -Raw) -match 'Programs\\Frosty\\Update-Frosty\.ps1' } catch { }
+        if ($isFrostyShim) { Remove-Item -LiteralPath $shimPath -Force -ErrorAction SilentlyContinue }
+        else { Write-Warning "Leaving unrelated command shim untouched: $shimPath" }
+    }
     $managedRoot = Join-Path $env:LOCALAPPDATA 'Frosty'
     $manifestPath = Join-Path $managedRoot 'managed-prerequisites.json'
     if (Test-Path -LiteralPath $manifestPath) {
