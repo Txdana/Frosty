@@ -491,7 +491,13 @@ try {
 
     $shell = New-Object -ComObject WScript.Shell
     $shimDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps'
-    if (Test-Path -LiteralPath $shimDir) { Copy-Item -LiteralPath (Join-Path $installDir 'frosty.cmd') -Destination (Join-Path $shimDir 'frosty.cmd') -Force }
+    $shimPath = Join-Path $shimDir 'frosty.cmd'
+    if (Test-Path -LiteralPath $shimDir) {
+        $canReplaceShim = -not (Test-Path -LiteralPath $shimPath)
+        if (-not $canReplaceShim) { try { $canReplaceShim = (Get-Content -LiteralPath $shimPath -Raw) -match 'Programs\\Frosty\\Update-Frosty\.ps1' } catch { } }
+        if ($canReplaceShim) { Copy-Item -LiteralPath (Join-Path $installDir 'frosty.cmd') -Destination $shimPath -Force }
+        else { Write-Warning "A different command already exists at $shimPath; leaving it untouched. You can run the updater directly from $installDir." }
+    }
     $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
     $shortcutPaths = @((Join-Path $startMenu 'Frosty.lnk'), (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Frosty.lnk'))
     foreach ($shortcutPath in $shortcutPaths) {
