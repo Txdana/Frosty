@@ -175,7 +175,7 @@ function Ensure-VisualCppToolchain {
             throw "Visual Studio is installed at '$existing', but the Visual Studio Installer setup.exe was not found. Open Visual Studio Installer, repair Build Tools 2022, and select Desktop development with C++."
         }
         Write-Step "Adding the required C++ workload and Windows SDK to the existing Visual Studio instance: $existing"
-        & $setup modify --installPath $existing --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --wait --norestart
+        & $setup modify --installPath $existing --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --norestart
         $setupExitCode = $LASTEXITCODE
         if ($setupExitCode -notin @(0, 3010)) {
             throw "Visual Studio Installer could not add the C++ workload (exit code $setupExitCode). Open Visual Studio Installer, choose Build Tools 2022 > Modify, select Desktop development with C++, and finish the installation. Then rerun this Frosty installer."
