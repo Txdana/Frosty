@@ -293,6 +293,8 @@ $stage = Join-Path $env:TEMP ('frosty-src-' + [guid]::NewGuid().ToString('N'))
 $sourceZip = Join-Path $env:TEMP ('frosty-source-' + [guid]::NewGuid().ToString('N') + '.zip')
 $installDir = Join-Path $env:LOCALAPPDATA 'Programs\Frosty'
 $sourceSnapshot = Join-Path $env:LOCALAPPDATA 'Frosty\source-build\project'
+$installStage = $null
+$installBackup = $null
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 
 try {
