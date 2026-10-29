@@ -14,7 +14,16 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Set-StrictMode -Version Latest
 
-$script:FrostyInstallerRevision = 'audit-2026-10-29-1'
+$script:FrostyInstallerRevision = 'audit-2026-10-29-2'
+$script:ManagedManifestPath = Join-Path $env:LOCALAPPDATA 'Frosty\managed-prerequisites.json'
+function Add-ManagedPackage([string]$Id) {
+    $managedRoot = Split-Path -Parent $script:ManagedManifestPath
+    New-Item -ItemType Directory -Force -Path $managedRoot | Out-Null
+    $ids = @()
+    if (Test-Path -LiteralPath $script:ManagedManifestPath) { try { $ids = @((Get-Content -LiteralPath $script:ManagedManifestPath -Raw | ConvertFrom-Json).wingetPackages) } catch { $ids = @() } }
+    $ids = @($ids + $Id | Where-Object { $_ } | Select-Object -Unique)
+    Set-Content -LiteralPath $script:ManagedManifestPath -Value (@{ wingetPackages=$ids } | ConvertTo-Json -Depth 4) -Encoding utf8
+}
 
 function Write-Step([string]$Message) { Write-Host "`n[Frosty] $Message" -ForegroundColor Cyan }
 function Write-Note([string]$Message) { Write-Host "[Frosty] $Message" -ForegroundColor Yellow }
@@ -40,6 +49,7 @@ function Invoke-WinGetInstall([string]$Id, [string[]]$ExtraArgs = @()) {
     if (-not $winget) {
         throw 'Windows Package Manager (WinGet) is missing. Install or update App Installer from Microsoft Store, then rerun this command.'
     }
+    $wasInstalled = Test-WinGetPackageInstalled $Id
     Write-Step "Installing prerequisite: $Id"
     $wingetArgs = @('install', '--id', $Id, '--exact', '--source', 'winget', '--accept-package-agreements', '--accept-source-agreements') + $ExtraArgs
     & $winget @wingetArgs
@@ -48,6 +58,7 @@ function Invoke-WinGetInstall([string]$Id, [string[]]$ExtraArgs = @()) {
     # 0x8A150061 (already installed) and 0x8A15002B (no applicable upgrade) are not failures; every caller re-verifies the tool afterwards.
     if ($code -in @(-1978335135, -1978335189)) { Write-Note "WinGet reports $Id is already installed and up to date (exit code $code)."; return }
     if ($code -ne 0) { throw "WinGet failed to install $Id (exit code $code). Resolve the WinGet error and rerun the same installer command." }
+    if (-not $wasInstalled -and (Test-WinGetPackageInstalled $Id)) { Add-ManagedPackage $Id }
 }
 
 function ConvertTo-CMakeVersion([string]$Text) {
@@ -327,6 +338,7 @@ function Ensure-ExternalFfmpeg([string]$SourceRoot) {
     if ($answer -match '^(n|no)$') { throw 'FFmpeg was not installed. Install a compatible FFmpeg build and rerun the Frosty installer.' }
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $helper -InstallIfMissing
     if ($LASTEXITCODE -ne 0) { throw 'FFmpeg installation or verification failed.' }
+    Add-ManagedPackage 'Gyan.FFmpeg'
     Refresh-ProcessPath
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $helper -CheckOnly
     if ($LASTEXITCODE -ne 0) { throw 'FFmpeg did not pass its verification check after installation.' }
@@ -478,6 +490,8 @@ try {
     $global:LASTEXITCODE = 0
 
     $shell = New-Object -ComObject WScript.Shell
+    $shimDir = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps'
+    if (Test-Path -LiteralPath $shimDir) { Copy-Item -LiteralPath (Join-Path $installDir 'frosty.cmd') -Destination (Join-Path $shimDir 'frosty.cmd') -Force }
     $startMenu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
     $shortcutPaths = @((Join-Path $startMenu 'Frosty.lnk'), (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Frosty.lnk'))
     foreach ($shortcutPath in $shortcutPaths) {
@@ -492,6 +506,7 @@ try {
 
     Write-Step 'Frosty installed successfully'
     Write-Host "Installed app: $(Join-Path $installDir 'Frosty.exe')" -ForegroundColor Green
+    Write-Host 'Terminal updater: frosty --update latest' -ForegroundColor Green
     Write-Host "Source snapshot: $sourceSnapshot" -ForegroundColor Green
     Start-Process (Join-Path $installDir 'Frosty.exe')
 } catch {
