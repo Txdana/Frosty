@@ -43,6 +43,7 @@ assert.doesNotMatch(installer, /^\s*& \$setup modify/m, 'installer does not laun
 assert.doesNotMatch(installer, /& \$setup modify[^\n]*--wait/, 'installed setup.exe must not receive --wait, which is bootstrapper-only');
 assert.match(installer, /Desktop development with C\+\+/, 'Visual Studio failure message gives the manual C++ workload recovery path');
 assert.match(installer, /Microsoft\.VisualStudio\.Component\.VC\.Tools\.x86\.x64/, 'installer verifies the MSVC C++ component after setup');
+assert.match(installer, /updated CMake version '\$cmakeVersionText'[\s\S]*CMake 3\.20 or newer/, 'installer verifies CMake was actually upgraded rather than trusting the package-manager exit code');
 assert.match(installer, /Checking external FFmpeg prerequisite/i, 'installer checks the external FFmpeg prerequisite');
 assert.match(installer, /-InstallIfMissing/, 'source installer offers automatic FFmpeg installation');
 assert.match(installer, /Install FFmpeg now\? \[Y\/n\]/, 'source installer requests user consent');
