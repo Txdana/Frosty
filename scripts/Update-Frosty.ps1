@@ -1,8 +1,7 @@
 # Frosty self-updater for the native Windows installation.
 [CmdletBinding()]
 param(
-    [Parameter(Position=0)][ValidateSet('--update')][string]$Command='--update',
-    [Parameter(Position=1)][ValidateSet('latest')][string]$Channel='latest',
+    [ValidateSet('latest')][string]$Channel='latest',
     [ValidateRange(0,2147483647)][int]$WaitForProcessId=0
 )
 $ErrorActionPreference='Stop'
