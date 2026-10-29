@@ -43,7 +43,7 @@ try {
     }
     # Pin the source archive to the exact same commit as this installer, not a second moving master snapshot.
     $env:FROSTY_REPO = 'Txdana/Frosty'
-    $env:FROSTY_SOURCE_URL = "https://github.com/Txdana/Frosty/archive/$commitSha.zip"
+    $env:FROSTY_SOURCE_URL = "https://github.com/Txdana/Frosty/archive/${commitSha}.zip"
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer
     if ($LASTEXITCODE -ne 0) { throw "Frosty update failed with exit code $LASTEXITCODE. The installer should preserve the previous app if the new build could not be staged." }
     Write-Host "[Frosty] Update completed from commit $commitSha." -ForegroundColor Green
