@@ -51,7 +51,7 @@ function Remove-ManagedFrostyArtifacts {
             'Kitware.CMake',
             'Microsoft.DotNet.SDK.8','Microsoft.DotNet.SDK.9','Microsoft.DotNet.SDK.10',
             'Python.Python.3.11','Python.Python.3.12','Python.Python.3.13',
-            'Microsoft.VisualStudio.2022.BuildTools','Microsoft.VisualStudio.2022.Community',
+            'Microsoft.VisualStudio.2022.BuildTools',
             'Gyan.FFmpeg','BtbN.FFmpeg.GPL'
         )
         foreach ($id in $knownIds | Where-Object { $_ -notin $ownedIds }) {
