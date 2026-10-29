@@ -47,6 +47,8 @@ try {
     Assert-That (-not (Test-Path -LiteralPath (Join-Path $installDir 'ffmpeg.exe'))) 'FFmpeg must not be bundled into the install directory'
     Assert-That (Test-Path -LiteralPath (Join-Path $installDir 'Update-Frosty.ps1')) 'updater script missing from installation'
     Assert-That (Test-Path -LiteralPath (Join-Path $installDir 'Cleanup-Frosty-Testing.ps1')) 'testing cleanup helper missing from installation'
+    $uninstallScriptText = Get-Content -LiteralPath (Join-Path $installDir 'Uninstall-Frosty.ps1') -Raw
+    Assert-That ($uninstallScriptText -match 'Cleanup-Frosty-Testing[.]ps1') 'uninstaller does not invoke the testing cleanup helper'
     Assert-That (Test-Path -LiteralPath (Join-Path $installDir 'frosty.cmd')) 'terminal command shim missing from installation'
     $commandShim = Get-Content -LiteralPath (Join-Path $installDir 'frosty.cmd') -Raw
     Assert-That ($commandShim -match '(?i)--uninstall') 'terminal command shim does not expose --uninstall'
