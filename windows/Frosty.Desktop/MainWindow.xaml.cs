@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private IntPtr _project;
     private string? _currentPath;
     private bool _dirty;
+    private bool _allowCloseForUpdate;
     private bool _refreshing;
     private double _pendingPreviewSeek;
     private bool _previewPlaying;
@@ -1169,7 +1170,7 @@ public partial class MainWindow : Window
             var startInfo = new ProcessStartInfo { FileName = "powershell.exe", WorkingDirectory = System.IO.Path.GetTempPath(), UseShellExecute = false, CreateNoWindow = false };
             startInfo.ArgumentList.Add("-NoProfile"); startInfo.ArgumentList.Add("-ExecutionPolicy"); startInfo.ArgumentList.Add("Bypass"); startInfo.ArgumentList.Add("-File"); startInfo.ArgumentList.Add(updater);
             startInfo.ArgumentList.Add("--update"); startInfo.ArgumentList.Add("latest"); startInfo.ArgumentList.Add("-WaitForProcessId"); startInfo.ArgumentList.Add(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            Process.Start(startInfo); StatusText.Text = "Updater launched. Frosty will close while the latest build is installed."; Close();
+            Process.Start(startInfo); _allowCloseForUpdate = true; StatusText.Text = "Updater launched. Frosty will close while the latest build is installed."; Close();
         }
         catch (Exception ex) { MessageBox.Show(this, "Could not start the updater: " + ex.Message, "Update failed", MessageBoxButton.OK, MessageBoxImage.Error); }
     }
@@ -1238,7 +1239,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
-        if (_dirty)
+        if (_dirty && !_allowCloseForUpdate)
         {
             CreateRecoverySnapshot();
             var choice = MessageBox.Show(this, "There are unsaved changes. A recovery snapshot has been attempted. Close Frosty anyway?", "Unsaved changes", MessageBoxButton.YesNo, MessageBoxImage.Warning);
