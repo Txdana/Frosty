@@ -8,7 +8,7 @@
           <Button Content="New project" Click="NewProject_Click"/><Button Content="Open .frosty" Click="OpenProject_Click"/><Button Content="Save" Click="SaveProject_Click"/><Button Content="Save as…" Click="SaveAs_Click"/><Button Content="Export video…" Click="ExportVideo_Click"/><Button Content="AI editor…" Click="AiEditor_Click"/>
         </StackPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-          <TextBlock Text="NATIVE CORE" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="10,0,4,0"/><Border Background="#253C36" CornerRadius="5" Padding="7,4"><TextBlock Text="Native timeline + media" Foreground="#8FE0B9" FontWeight="SemiBold"/></Border><Button Content="Uninstall" Click="UninstallFrosty_Click" Margin="10,0,0,0" Foreground="#FFB4AB" ToolTip="Remove Frosty from this Windows account"/>
+          <TextBlock Text="NATIVE CORE" Foreground="{StaticResource MutedText}" VerticalAlignment="Center" Margin="10,0,4,0"/><Border Background="#253C36" CornerRadius="5" Padding="7,4"><TextBlock Text="Native timeline + media" Foreground="#8FE0B9" FontWeight="SemiBold"/></Border><Button Content="Check for updates" Click="UpdateFrosty_Click" Margin="10,0,0,0" ToolTip="Build and install the latest Frosty version"/><Button Content="Uninstall" Click="UninstallFrosty_Click" Margin="10,0,0,0" Foreground="#FFB4AB" ToolTip="Remove Frosty and installer-managed prerequisites"/>
         </StackPanel>
       </DockPanel>
     </Border>
