@@ -24,6 +24,15 @@ const core = read('native/src/core.cpp');
 // The default install/release path must be native WPF, with Electron available only via explicit opt-in scripts.
 assert.match(installer, /scripts[\\/]build-native\.ps1/i, 'installer invokes the native C++/WPF build');
 assert.match(installer, /function Get-VisualStudioInstallPaths/, 'installer discovers existing Visual Studio instances via vswhere and setup registry');
+assert.match(installer, /FrostyInstallerRevision = 'audit-2026-10-29-1'/, 'installer prints a revision marker so stale CDN scripts can be identified');
+assert.match(installer, /Write-Step \"Installer revision: \$script:FrostyInstallerRevision\"/, 'installer logs the exact revision before starting prerequisite work');
+assert.match(installer, /Frosty\.installing-/, 'installer stages the new app before replacing an existing installation');
+assert.match(installer, /Frosty\.backup-/, 'installer keeps a rollback copy during replacement');
+assert.match(installer, /Staged build is incomplete; the existing Frosty installation has been left untouched/, 'installer validates staged files before replacing the current app');
+assert.doesNotMatch(installer, /if \(Test-Path -LiteralPath \$installDir\) \{ Remove-Item -LiteralPath \$installDir -Recurse -Force \}/, 'installer must not delete the current app before a replacement is ready');
+assert.match(installer, /Join-Path \$src 'native\\\\build'/, 'source snapshot excludes the native build output');
+assert.match(installer, /Join-Path \$src 'native\\\\build-p2'/, 'source snapshot excludes the test build output');
+assert.match(nativeReleaseInstaller, /if \(\[System\.IO\.Path\]::GetFullPath\(\$_.Path\) -ieq \$installedExe\)/, 'ZIP installer only stops the Frosty process from the installation being updated');
 assert.match(installer, /function Test-WinGetPackageInstalled/, 'installer detects an already installed Build Tools package');
 assert.match(installer, /Test-WinGetPackageInstalled 'Microsoft\.VisualStudio\.2022\.BuildTools'/, 'installer avoids blindly upgrading an already installed but undiscoverable Build Tools instance');
 assert.match(installer, /Start-Process -FilePath \$setup -ArgumentList \$setupArguments -Verb RunAs -Wait -PassThru/, 'installer elevates the existing Visual Studio setup operation through UAC');
