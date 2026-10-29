@@ -1152,11 +1152,33 @@ public partial class MainWindow : Window
         win.ShowDialog();
     }
 
+    private void UpdateFrosty_Click(object sender, RoutedEventArgs e)
+    {
+        var confirmation = MessageBox.Show(this, "Frosty will download the latest source, run regression tests, rebuild the native app, and replace this installation. This may take several minutes and requires internet access and Windows build prerequisites. Your projects and media are kept. Continue?", "Update Frosty", MessageBoxButton.YesNo, MessageBoxImage.Information, MessageBoxResult.Yes);
+        if (confirmation != MessageBoxResult.Yes) return;
+        if (_dirty)
+        {
+            CreateRecoverySnapshot();
+            var saveChoice = MessageBox.Show(this, "This project has unsaved changes. A recovery snapshot was attempted. Continue with the update?", "Unsaved project changes", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (saveChoice != MessageBoxResult.Yes) return;
+        }
+        var updater = System.IO.Path.Combine(AppContext.BaseDirectory, "Update-Frosty.ps1");
+        if (!System.IO.File.Exists(updater)) { MessageBox.Show(this, "The updater is missing. Reinstall Frosty using the latest installer.", "Cannot update Frosty", MessageBoxButton.OK, MessageBoxImage.Error); return; }
+        try
+        {
+            var startInfo = new ProcessStartInfo { FileName = "powershell.exe", WorkingDirectory = System.IO.Path.GetTempPath(), UseShellExecute = false, CreateNoWindow = false };
+            startInfo.ArgumentList.Add("-NoProfile"); startInfo.ArgumentList.Add("-ExecutionPolicy"); startInfo.ArgumentList.Add("Bypass"); startInfo.ArgumentList.Add("-File"); startInfo.ArgumentList.Add(updater);
+            startInfo.ArgumentList.Add("--update"); startInfo.ArgumentList.Add("latest"); startInfo.ArgumentList.Add("-WaitForProcessId"); startInfo.ArgumentList.Add(Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            Process.Start(startInfo); StatusText.Text = "Updater launched. Frosty will close while the latest build is installed."; Close();
+        }
+        catch (Exception ex) { MessageBox.Show(this, "Could not start the updater: " + ex.Message, "Update failed", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+
     private void UninstallFrosty_Click(object sender, RoutedEventArgs e)
     {
         var confirmation = MessageBox.Show(
             this,
-            "Remove Frosty from this Windows account? The app and its shortcuts will be removed. Saved .frosty projects, original media, recovery snapshots, the source snapshot, FFmpeg, and build tools will be kept.",
+            "Remove Frosty from this Windows account? The app, command launcher, shortcuts, installer-managed prerequisites (such as Node.js used for tests), and Frosty build artifacts will be removed where possible. Saved .frosty projects, original media, and recovery snapshots will be kept. Pre-existing tools are not removed.",
             "Uninstall Frosty",
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning,
